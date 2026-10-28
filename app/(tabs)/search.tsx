@@ -45,7 +45,7 @@ export default function BookSearch() {
     try {
       const targetId = clubId ?? (await getClub())?.$id;
       if (!targetId) {
-        setMessage('Join or create a club first (Club tab).');
+        setMessage('Join or create a club first (Clubs tab).');
         return;
       }
       await setCurrentBook(targetId, book);

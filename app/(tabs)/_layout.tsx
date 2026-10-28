@@ -36,9 +36,9 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="club"
+        name="clubs"
         options={{
-          title: 'Club',
+          title: 'Clubs',
           tabBarIcon: ({ color }) => <MaterialIcons name="groups" size={26} color={color} />,
         }}
       />

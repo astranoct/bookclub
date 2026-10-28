@@ -82,7 +82,7 @@ export default function Home() {
           <ThemedText type="muted">
             Create a book club, then pick the first book to read together.
           </ThemedText>
-          <Button title="Create a club" onPress={() => router.push('/club')} />
+          <Button title="Create a club" onPress={() => router.push('/clubs')} />
         </Card>
       ) : (
         clubs.map((club) => (

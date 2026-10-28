@@ -1,9 +1,16 @@
+import * as Linking from 'expo-linking';
 import { Account, Client, ID, Teams } from 'react-native-appwrite';
 
 import type { Book } from '@/types/book';
+import { planLeave, type MembershipInfo } from '@/utils/clubs';
+import type { InviteParams } from '@/utils/invites';
+import { displayName } from '@/utils/people';
 
 const projectId = process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID;
 const endpoint = process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT ?? 'https://cloud.appwrite.io/v1';
+// Where Appwrite sends invitees after they open the emailed link. Appwrite only allows
+// URLs on hosts registered as platforms in the project, so this can be overridden.
+const inviteUrl = process.env.EXPO_PUBLIC_INVITE_URL ?? Linking.createURL('invite');
 const platform = process.env.EXPO_PUBLIC_APPWRITE_PLATFORM ?? 'com.boosterlong.bookclub';
 
 if (!projectId) {
@@ -69,9 +76,56 @@ export function createClub(name: string) {
   return teams.create(ID.unique(), name, ['owner', 'member']);
 }
 
-export async function getClubMembers(clubId: string) {
+export function getClubById(clubId: string) {
+  return teams.get(clubId);
+}
+
+export interface ClubMember extends MembershipInfo {
+  /** Display name only. The member's email is deliberately never exposed. */
+  name: string;
+}
+
+export async function getClubMembers(clubId: string): Promise<ClubMember[]> {
   const { memberships } = await teams.listMemberships(clubId);
-  return memberships;
+  return memberships.map((m) => ({
+    id: m.$id,
+    userId: m.userId,
+    roles: m.roles,
+    confirmed: m.confirm,
+    name: displayName(m.userName),
+  }));
+}
+
+/** Emails the invitee a link. Only club owners can do this. */
+export function inviteToClub(clubId: string, email: string) {
+  return teams.createMembership(clubId, ['member'], email.trim(), undefined, undefined, inviteUrl);
+}
+
+export function acceptInvite({ teamId, membershipId, userId, secret }: InviteParams) {
+  return teams.updateMembershipStatus(teamId, membershipId, userId, secret);
+}
+
+/**
+ * Leaves a club. If you are the last member the club is deleted, and if you are its only
+ * owner, ownership passes to the longest-standing member first.
+ */
+export async function leaveClub(clubId: string): Promise<'left' | 'deleted'> {
+  const [me, members] = await Promise.all([account.get(), getClubMembers(clubId)]);
+  const plan = planLeave(members, me.$id);
+
+  if (plan.action === 'delete-club') {
+    await teams.delete(clubId);
+    return 'deleted';
+  }
+
+  if (plan.promoteMembershipId) {
+    await teams.updateMembership(clubId, plan.promoteMembershipId, ['owner', 'member']);
+  }
+  const mine = members.find((m) => m.userId === me.$id);
+  if (mine) {
+    await teams.deleteMembership(clubId, mine.id);
+  }
+  return 'left';
 }
 
 export async function getCurrentBook(clubId: string): Promise<Book | null> {

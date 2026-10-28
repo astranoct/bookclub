@@ -21,6 +21,16 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={theme}>
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.background } }}>
+        <Stack.Screen
+          name="club/[id]"
+          options={{
+            headerShown: true,
+            title: '',
+            headerStyle: { backgroundColor: Colors.background },
+            headerTintColor: Colors.text,
+            headerShadowVisible: false,
+          }}
+        />
         <Stack.Screen name="+not-found" options={{ headerShown: true, title: 'Not found' }} />
       </Stack>
       <StatusBar style="light" />
