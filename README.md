@@ -23,7 +23,7 @@ You need Node 18+ and an Appwrite project (Appwrite Cloud's free tier works) wit
 
 ```bash
 npm install
-cp .env.example .env.local   # then fill in your Appwrite project ID
+cp .env.example .env.local   # then fill in your Appwrite project ID and endpoint
 npx expo start
 ```
 

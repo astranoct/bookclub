@@ -3,6 +3,7 @@ import { Account, Client, ID, Teams } from 'react-native-appwrite';
 import type { Book } from '@/types/book';
 
 const projectId = process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID;
+const endpoint = process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT ?? 'https://cloud.appwrite.io/v1';
 const platform = process.env.EXPO_PUBLIC_APPWRITE_PLATFORM ?? 'com.boosterlong.bookclub';
 
 if (!projectId) {
@@ -11,7 +12,7 @@ if (!projectId) {
   );
 }
 
-const client = new Client().setProject(projectId).setPlatform(platform);
+const client = new Client().setEndpoint(endpoint).setProject(projectId).setPlatform(platform);
 const account = new Account(client);
 const teams = new Teams(client);
 
