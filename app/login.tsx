@@ -5,7 +5,7 @@ import { Button } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedTextInput } from '@/components/ThemedTextInput';
-import { register, signIn, signInAnonymously } from '@/services/appwrite';
+import { pingAppwrite, register, signIn, signInAnonymously } from '@/services/appwrite';
 
 export default function Login() {
   const router = useRouter();
@@ -13,6 +13,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pingStatus, setPingStatus] = useState<string | null>(null);
 
   async function run(action: () => Promise<unknown>) {
     setBusy(true);
@@ -24,6 +25,16 @@ export default function Login() {
       setError(e instanceof Error ? e.message : 'Something went wrong.');
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function checkConnection() {
+    setPingStatus('Checking...');
+    try {
+      await pingAppwrite();
+      setPingStatus('Connected to Appwrite.');
+    } catch (e) {
+      setPingStatus(e instanceof Error ? e.message : 'Could not reach Appwrite.');
     }
   }
 
@@ -61,6 +72,9 @@ export default function Login() {
         disabled={busy}
         onPress={() => run(signInAnonymously)}
       />
+
+      <Button title="Check Appwrite connection" onPress={checkConnection} />
+      {pingStatus && <ThemedText>{pingStatus}</ThemedText>}
     </Screen>
   );
 }
