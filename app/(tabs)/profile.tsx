@@ -8,7 +8,7 @@ import { Card, Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedTextInput } from '@/components/ThemedTextInput';
 import { Colors } from '@/constants/Colors';
-import { getCurrentUser, signOut, updateName } from '@/services/appwrite';
+import { getCurrentUser, saveProfile, signOut, syncProfile, updateName } from '@/services/appwrite';
 import { displayName, hasRealName, validateName } from '@/utils/people';
 
 interface Profile {
@@ -27,6 +27,7 @@ export default function ProfileScreen() {
   useEffect(() => {
     getCurrentUser().then((user) => {
       if (user) {
+        syncProfile({ id: user.$id, name: user.name });
         setProfile({ name: user.name, email: user.email });
         setName(hasRealName(user.name) ? user.name : '');
       }
@@ -46,7 +47,12 @@ export default function ProfileScreen() {
       const user = await updateName(name.trim());
       setProfile({ name: user.name, email: user.email });
       setName(hasRealName(user.name) ? user.name : '');
-      setFeedback({ ok: true, text: 'Name saved.' });
+      try {
+        await saveProfile(user.$id, user.name);
+        setFeedback({ ok: true, text: 'Name saved.' });
+      } catch {
+        setFeedback({ ok: false, text: "Name saved, but it couldn't be shared with your clubs yet." });
+      }
     } catch {
       setFeedback({ ok: false, text: 'Could not save your name. Try again.' });
     } finally {
@@ -82,7 +88,7 @@ export default function ProfileScreen() {
       <Card>
         <ThemedText type="label">Display name</ThemedText>
         <ThemedText type="muted">
-          This is what other club members see. Your email is never shown to them.
+          This is what other club members see. The app never shows your email to them.
         </ThemedText>
         <ThemedTextInput
           placeholder="Your name"

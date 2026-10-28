@@ -167,8 +167,8 @@ export default function ClubDetail() {
         {iAmOwner ? (
           <>
             <ThemedText type="muted">
-              We'll email them a link to join this club. They'll only ever appear to others by
-              their display name.
+              We'll email them a link to join this club. Members only see each other's display
+              names.
             </ThemedText>
             <ThemedTextInput
               placeholder="friend@example.com"

@@ -4,6 +4,7 @@ import {
   hasRealName,
   initialOf,
   MAX_NAME_LENGTH,
+  resolveMemberName,
   validateName,
 } from '../people';
 
@@ -40,6 +41,22 @@ describe('names that Appwrite filled in with an email', () => {
 
   it('cannot be saved as a display name', () => {
     expect(validateName(email)).toMatch(/rather than an email/);
+  });
+});
+
+describe('resolveMemberName', () => {
+  it('prefers the profile name', () => {
+    expect(resolveMemberName(' Ada ', 'Someone Else')).toBe('Ada');
+  });
+
+  it('falls back to the membership name when there is no profile', () => {
+    expect(resolveMemberName(undefined, 'Grace')).toBe('Grace');
+    expect(resolveMemberName('', 'Grace')).toBe('Grace');
+  });
+
+  it('never returns an email from either source', () => {
+    expect(resolveMemberName('ada@example.com', 'grace@example.com')).toBe('Unnamed reader');
+    expect(resolveMemberName(undefined, undefined)).toBe('Unnamed reader');
   });
 });
 

@@ -16,6 +16,14 @@ export function displayName(name?: string | null) {
   return hasRealName(name) ? name.trim() : 'Unnamed reader';
 }
 
+/**
+ * The name to show for a club member. Prefers the name from the profiles collection, since
+ * Appwrite's membership names can be hidden or blank, and never falls back to an email.
+ */
+export function resolveMemberName(profileName?: string | null, membershipName?: string | null) {
+  return hasRealName(profileName) ? profileName.trim() : displayName(membershipName);
+}
+
 export function firstName(name?: string | null) {
   return hasRealName(name) ? name.trim().split(/\s+/)[0] : '';
 }

@@ -1,16 +1,29 @@
 import * as Linking from 'expo-linking';
-import { Account, Client, ID, Teams } from 'react-native-appwrite';
+import {
+  Account,
+  AppwriteException,
+  Client,
+  Databases,
+  ID,
+  Permission,
+  Query,
+  Role,
+  Teams,
+  type Models,
+} from 'react-native-appwrite';
 
 import type { Book } from '@/types/book';
 import { planLeave, type MembershipInfo } from '@/utils/clubs';
 import type { InviteParams } from '@/utils/invites';
-import { displayName } from '@/utils/people';
+import { hasRealName, resolveMemberName } from '@/utils/people';
 
 const projectId = process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID;
 const endpoint = process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT ?? 'https://cloud.appwrite.io/v1';
 // Where Appwrite sends invitees after they open the emailed link. Appwrite only allows
 // URLs on hosts registered as platforms in the project, so this can be overridden.
 const inviteUrl = process.env.EXPO_PUBLIC_INVITE_URL ?? Linking.createURL('invite');
+const databaseId = process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID ?? 'bookclub';
+const profilesCollectionId = process.env.EXPO_PUBLIC_APPWRITE_PROFILES_COLLECTION_ID ?? 'profiles';
 const platform = process.env.EXPO_PUBLIC_APPWRITE_PLATFORM ?? 'com.boosterlong.bookclub';
 
 if (!projectId) {
@@ -22,6 +35,7 @@ if (!projectId) {
 const client = new Client().setEndpoint(endpoint).setProject(projectId).setPlatform(platform);
 const account = new Account(client);
 const teams = new Teams(client);
+const databases = new Databases(client);
 
 /**
  * Verifies the endpoint, project ID and registered platform are all correct.
@@ -57,6 +71,67 @@ export function updateName(name: string) {
   return account.updateName(name);
 }
 
+/**
+ * Display names live in a `profiles` collection (one document per user, ID = user ID) because
+ * Appwrite's membership names can come back blank for other members. Documents hold a name only.
+ */
+export async function saveProfile(userId: string, name: string) {
+  try {
+    await databases.updateDocument(databaseId, profilesCollectionId, userId, { name });
+  } catch (e) {
+    if (!(e instanceof AppwriteException) || e.code !== 404) throw e;
+    await databases.createDocument(databaseId, profilesCollectionId, userId, { name }, [
+      Permission.read(Role.users()),
+      Permission.update(Role.user(userId)),
+      Permission.delete(Role.user(userId)),
+    ]);
+  }
+}
+
+let lastSyncedProfile = '';
+
+/** Makes sure an existing account's name is in the profiles collection. Best effort. */
+export async function syncProfile(user: { id: string; name: string }) {
+  if (!hasRealName(user.name)) return;
+  const key = `${user.id}:${user.name}`;
+  if (key === lastSyncedProfile) return;
+
+  try {
+    const profile = await databases.getDocument<{ name?: string } & Models.Document>(
+      databaseId,
+      profilesCollectionId,
+      user.id
+    );
+    if (profile.name !== user.name) await saveProfile(user.id, user.name);
+    lastSyncedProfile = key;
+  } catch (e) {
+    if (e instanceof AppwriteException && e.code === 404) {
+      try {
+        await saveProfile(user.id, user.name);
+        lastSyncedProfile = key;
+      } catch {
+        // Profiles aren't set up yet; names simply stay private until they are.
+      }
+    }
+  }
+}
+
+/** Display names by user ID. Returns an empty map if the collection is unavailable. */
+export async function getProfileNames(userIds: string[]): Promise<Record<string, string>> {
+  const ids = userIds.slice(0, 100);
+  if (ids.length === 0) return {};
+  try {
+    const { documents } = await databases.listDocuments<{ name?: string } & Models.Document>(
+      databaseId,
+      profilesCollectionId,
+      [Query.equal('$id', ids), Query.limit(ids.length)]
+    );
+    return Object.fromEntries(documents.map((d) => [d.$id, d.name ?? '']));
+  } catch {
+    return {};
+  }
+}
+
 export function signOut() {
   return account.deleteSession('current');
 }
@@ -81,12 +156,13 @@ export interface ClubMember extends MembershipInfo {
 
 export async function getClubMembers(clubId: string): Promise<ClubMember[]> {
   const { memberships } = await teams.listMemberships(clubId);
+  const profileNames = await getProfileNames(memberships.map((m) => m.userId));
   return memberships.map((m) => ({
     id: m.$id,
     userId: m.userId,
     roles: m.roles,
     confirmed: m.confirm,
-    name: displayName(m.userName),
+    name: resolveMemberName(profileNames[m.userId], m.userName),
   }));
 }
 
