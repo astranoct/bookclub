@@ -1,50 +1,56 @@
-# Welcome to your Expo app 👋
+# Book Club
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A small cross-platform app (iOS, Android, web) for reading with friends. Search for a book, set it as your club's current read, and see what everyone is reading together.
 
-## Get started
+## Features
 
-1. Install dependencies
+- Sign in with email, create an account, or continue as a guest
+- Search [Open Library](https://openlibrary.org/developers/api) by title, with a "wrong book?" picker for alternate matches
+- Create a club and share the current book with its members
+- Light and dark themes
 
-   ```bash
-   npm install
-   ```
+## Tech stack
 
-2. Start the app
+- [Expo](https://expo.dev) (SDK 52) and React Native, with [Expo Router](https://docs.expo.dev/router/introduction) for file-based routing
+- TypeScript in strict mode
+- [Appwrite](https://appwrite.io) for authentication and clubs (Teams; the current book is stored in the team's preferences)
+- Open Library Search API for book data and covers
+- Jest with `jest-expo` for tests
 
-   ```bash
-    npx expo start
-   ```
+## Getting started
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+You need Node 18+ and an Appwrite project (Appwrite Cloud's free tier works) with a platform registered for the app's bundle/package ID.
 
 ```bash
-npm run reset-project
+npm install
+cp .env.example .env.local   # then fill in your Appwrite project ID
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Open it in Expo Go, an emulator, or the browser (press `w`).
 
-## Learn more
+### Scripts
 
-To learn more about developing your project with Expo, look at the following resources:
+| Command             | What it does                  |
+| ------------------- | ----------------------------- |
+| `npm start`         | Start the Expo dev server     |
+| `npm test`          | Run the Jest tests            |
+| `npm run typecheck` | Type-check with `tsc`         |
+| `npm run lint`      | Lint with `expo lint`         |
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Project structure
 
-## Join the community
+```
+app/            Screens and routes (login, tabs: search + club)
+components/     Shared UI (BookCard, Screen, themed text/inputs)
+services/       Appwrite and Open Library clients (+ tests)
+types/          Shared TypeScript types
+hooks/          Theme helpers
+constants/      Color palette
+```
 
-Join our community of developers creating universal apps.
+## Roadmap
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- Join an existing club by invite instead of only creating one
+- Reading history (previous books) per club
+- Per-member progress and discussion notes

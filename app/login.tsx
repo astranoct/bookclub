@@ -1,128 +1,66 @@
-import { StyleSheet, Image, Platform, Button, TextInput } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Button } from 'react-native';
 
-import { Collapsible } from '@/components/Collapsible';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
+import { Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import { useEffect, useState } from 'react';
-import { client, appWriteController } from '@/services/appWriteController';
-import { Link } from 'expo-router';
+import { ThemedTextInput } from '@/components/ThemedTextInput';
+import { register, signIn, signInAnonymously } from '@/services/appwrite';
 
-export default function TabTwoScreen() {
-
-  const { registerAnonymousUser, registerUser, login, logout, checkSession } = appWriteController;
-  const [uid, setUid] = useState('');
+export default function Login() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    checkSession(client).then((response) => {
-      if (response) {
-        setUid(response.$id);
-      }
-    });
-  }, []);
+  async function run(action: () => Promise<unknown>) {
+    setBusy(true);
+    setError(null);
+    try {
+      await action();
+      router.replace('/search');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Something went wrong.');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <Link style={styles.link} replace href="/">/index</Link>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Login</ThemedText>
-      </ThemedView>
-      <ThemedText>Account functionality testing page.</ThemedText>
-      <ThemedText>Current user ID: {uid}</ThemedText>
-      <Collapsible title="Anonymous Login">
-        <Button
-          title="Login"
-          onPress={() => {
-            registerAnonymousUser(client).then((response) => {
-              setUid(response.$id);
-            });
-          }}
-        />
-      </Collapsible>
-      <Collapsible title="Create Account">
-        <TextInput
-          placeholder="Email"
-          onChangeText={setEmail}
-          value={email}
-        />
-        <TextInput
-          placeholder="Password"
-          onChangeText={setPassword}
-          value={password}
-          secureTextEntry
-        />
-        <Button
-          title="Register"
-          onPress={() => {
-            registerUser(client, email, password).then((response) => {
-              setUid(response.$id);
-            });
-          }}
-        />
-      </Collapsible>
-      <Collapsible title="Login">
-        <TextInput
-          placeholder="Email"
-          onChangeText={setEmail}
-          value={email}
-        />
-        <TextInput
-          placeholder="Password"
-          onChangeText={setPassword}
-          value={password}
-          secureTextEntry
-        />
-        <Button
-          title="Login"
-          onPress={() => {
-            login(client, email, password).then((response) => {
-              setUid(response.$id);
-            });
-          }}
-        />
-      </Collapsible>
-      <Collapsible title="Logout">
-        <Button
-          title="Logout"
-          onPress={() => {
-            logout(client).then(() => {
-              setUid('null');
-            });
-          }}
-        />
-      </Collapsible>
-    </ParallaxScrollView>
+    <Screen>
+      <ThemedText type="title">Book Club</ThemedText>
+      <ThemedText>Pick a book with your friends and read it together.</ThemedText>
+
+      <ThemedTextInput
+        placeholder="Email"
+        autoCapitalize="none"
+        autoComplete="email"
+        keyboardType="email-address"
+        value={email}
+        onChangeText={setEmail}
+      />
+      <ThemedTextInput
+        placeholder="Password"
+        autoCapitalize="none"
+        secureTextEntry
+        value={password}
+        onChangeText={setPassword}
+      />
+
+      {error && <ThemedText style={{ color: '#c0392b' }}>{error}</ThemedText>}
+
+      <Button title="Sign in" disabled={busy} onPress={() => run(() => signIn(email, password))} />
+      <Button
+        title="Create account"
+        disabled={busy}
+        onPress={() => run(() => register(email, password))}
+      />
+      <Button
+        title="Continue as guest"
+        disabled={busy}
+        onPress={() => run(signInAnonymously)}
+      />
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  link: {
-    color: 'white',
-    textDecorationLine: 'underline',
-    backgroundColor: 'black',
-    padding: 8,
-    width: 85,
-  }
-});

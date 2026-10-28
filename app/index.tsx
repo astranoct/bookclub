@@ -1,34 +1,28 @@
-
-import { Link, Redirect } from 'expo-router';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { client, appWriteController } from '@/services/appWriteController';
-import React from 'react';
-import { ThemedText } from '@/components/ThemedText';
+import { ActivityIndicator, StyleSheet } from 'react-native';
 
-export default function HomeScreen() {
+import { ThemedView } from '@/components/ThemedView';
+import { getCurrentUser } from '@/services/appwrite';
 
-  const [redirect, setRedirect] = useState(<> </>);
+export default function Index() {
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
 
   useEffect(() => {
-    appWriteController.checkSession(client).then((res) => {
-      console.log('res', res);
-      setRedirect(res ? <Redirect href="/search" /> : <Redirect href="/login" />);
-    });
-  } , []);
+    getCurrentUser().then((user) => setSignedIn(user !== null));
+  }, []);
 
-  return (
-    <View style={styles.container}>
-      <ActivityIndicator size="large" color="#0000ff" />
-      <ThemedText>{redirect}</ThemedText>
-    </View>
-  );
+  if (signedIn === null) {
+    return (
+      <ThemedView style={styles.container}>
+        <ActivityIndicator size="large" />
+      </ThemedView>
+    );
+  }
+
+  return <Redirect href={signedIn ? '/search' : '/login'} />;
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });
