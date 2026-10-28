@@ -1,4 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
@@ -13,6 +14,9 @@ import { searchForBook } from '@/services/openLibrary';
 import type { Book, SearchResult } from '@/types/book';
 
 export default function BookSearch() {
+  const router = useRouter();
+  // Set when arriving from a club card on Home; otherwise the first club is used.
+  const { clubId } = useLocalSearchParams<{ clubId?: string }>();
   const [query, setQuery] = useState('');
   const [result, setResult] = useState<SearchResult | null>(null);
   const [selected, setSelected] = useState<Book | null>(null);
@@ -39,13 +43,18 @@ export default function BookSearch() {
 
   async function shareWithClub(book: Book) {
     try {
-      const club = await getClub();
-      if (!club) {
+      const targetId = clubId ?? (await getClub())?.$id;
+      if (!targetId) {
         setMessage('Join or create a club first (Club tab).');
         return;
       }
-      await setCurrentBook(club.$id, book);
+      await setCurrentBook(targetId, book);
       setMessage(`"${book.title}" is now your club's book.`);
+      if (clubId) {
+        // Clear the target so later visits to this tab don't silently reuse it.
+        router.setParams({ clubId: undefined });
+        router.navigate('/home');
+      }
     } catch {
       setMessage('Could not update the club book. Try again.');
     }

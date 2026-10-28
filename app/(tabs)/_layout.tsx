@@ -22,6 +22,13 @@ export default function TabLayout() {
         animation: 'shift',
       }}>
       <Tabs.Screen
+        name="home"
+        options={{
+          title: 'Home',
+          tabBarIcon: ({ color }) => <MaterialIcons name="home" size={26} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="search"
         options={{
           title: 'Search',

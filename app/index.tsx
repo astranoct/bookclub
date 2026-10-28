@@ -20,7 +20,7 @@ export default function Index() {
     );
   }
 
-  return <Redirect href={signedIn ? '/search' : '/login'} />;
+  return <Redirect href={signedIn ? '/home' : '/login'} />;
 }
 
 const styles = StyleSheet.create({

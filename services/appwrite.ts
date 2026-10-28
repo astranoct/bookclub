@@ -54,9 +54,14 @@ export function signOut() {
   return account.deleteSession('current');
 }
 
+export async function getClubs() {
+  const { teams: clubs } = await teams.list();
+  return clubs;
+}
+
 /** The first club the current user belongs to, or null if they have none. */
 export async function getClub() {
-  const { teams: clubs } = await teams.list();
+  const clubs = await getClubs();
   return clubs[0] ?? null;
 }
 

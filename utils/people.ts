@@ -5,6 +5,10 @@ export function displayName(name?: string | null) {
   return name?.trim() || 'Unnamed reader';
 }
 
+export function firstName(name?: string | null) {
+  return name?.trim().split(/\s+/)[0] ?? '';
+}
+
 export function initialOf(name?: string | null) {
   return name?.trim().charAt(0).toUpperCase() || '?';
 }

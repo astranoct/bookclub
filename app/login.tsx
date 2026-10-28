@@ -25,7 +25,7 @@ export default function Login() {
     setError(null);
     try {
       await action();
-      router.replace('/search');
+      router.replace('/home');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong.');
     } finally {

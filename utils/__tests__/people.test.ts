@@ -1,4 +1,4 @@
-import { displayName, initialOf, MAX_NAME_LENGTH, validateName } from '../people';
+import { displayName, firstName, initialOf, MAX_NAME_LENGTH, validateName } from '../people';
 
 describe('displayName', () => {
   it('trims a real name', () => {
@@ -10,6 +10,14 @@ describe('displayName', () => {
     expect(displayName('   ')).toBe('Unnamed reader');
     expect(displayName(undefined)).toBe('Unnamed reader');
     expect(displayName(null)).toBe('Unnamed reader');
+  });
+});
+
+describe('firstName', () => {
+  it('returns the first word, or an empty string', () => {
+    expect(firstName('  Ada Lovelace ')).toBe('Ada');
+    expect(firstName('')).toBe('');
+    expect(firstName(undefined)).toBe('');
   });
 });
 
