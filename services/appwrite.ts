@@ -46,6 +46,10 @@ export function signIn(email: string, password: string) {
   return account.createEmailPasswordSession(email, password);
 }
 
+export function updateName(name: string) {
+  return account.updateName(name);
+}
+
 export function signOut() {
   return account.deleteSession('current');
 }

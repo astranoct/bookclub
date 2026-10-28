@@ -7,6 +7,7 @@ A small cross-platform app (iOS, Android, web) for reading with friends. Search 
 - Sign in with email, create an account, or continue as a guest
 - Search [Open Library](https://openlibrary.org/developers/api) by title, with a "wrong book?" picker for alternate matches
 - Create a club and share the current book with its members
+- Profile screen to set a display name; club members are shown by name only, never by email
 - A dark, modern UI built on a small design system (`constants/Colors.ts`, `Button`, `Card`, `BookCard`)
 
 ## Tech stack
@@ -41,9 +42,10 @@ Open it in Expo Go, an emulator, or the browser (press `w`).
 ## Project structure
 
 ```
-app/            Screens and routes (login, tabs: search + club)
+app/            Screens and routes (login, tabs: search, club, profile)
 components/     Shared UI (BookCard, Screen, themed text/inputs)
 services/       Appwrite and Open Library clients (+ tests)
+utils/          Small pure helpers (+ tests)
 types/          Shared TypeScript types
 constants/      Color palette and radii
 ```

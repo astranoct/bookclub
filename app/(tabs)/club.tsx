@@ -1,7 +1,8 @@
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
+import { Avatar } from '@/components/Avatar';
 import { BookCard } from '@/components/BookCard';
 import { Button } from '@/components/Button';
 import { Card, Screen } from '@/components/Screen';
@@ -13,27 +14,19 @@ import {
   getClub,
   getClubMembers,
   getCurrentBook,
-  signOut,
+  getCurrentUser,
 } from '@/services/appwrite';
 import type { Book } from '@/types/book';
+import { displayName } from '@/utils/people';
 
 interface ClubState {
   id: string;
   name: string;
-  members: string[];
+  members: { id: string; name: string; isMe: boolean }[];
   book: Book | null;
 }
 
-function Avatar({ name }: { name: string }) {
-  return (
-    <View style={styles.avatar}>
-      <ThemedText style={styles.avatarText}>{name.trim().charAt(0).toUpperCase() || '?'}</ThemedText>
-    </View>
-  );
-}
-
 export default function ClubScreen() {
-  const router = useRouter();
   const [club, setClub] = useState<ClubState | null>(null);
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState('');
@@ -46,14 +39,20 @@ export default function ClubScreen() {
         setClub(null);
         return;
       }
-      const [members, book] = await Promise.all([
+      const [members, book, me] = await Promise.all([
         getClubMembers(found.$id),
         getCurrentBook(found.$id),
+        getCurrentUser(),
       ]);
       setClub({
         id: found.$id,
         name: found.name,
-        members: members.map((m) => m.userName || m.userEmail || 'Guest reader'),
+        // Only display names are shown. Never fall back to the member's email.
+        members: members.map((m) => ({
+          id: m.$id,
+          name: displayName(m.userName),
+          isMe: m.userId === me?.$id,
+        })),
         book,
       });
     } catch {
@@ -80,11 +79,6 @@ export default function ClubScreen() {
     } catch {
       setError('Could not create the club. Try again.');
     }
-  }
-
-  async function logout() {
-    await signOut();
-    router.replace('/login');
   }
 
   if (loading) {
@@ -117,10 +111,11 @@ export default function ClubScreen() {
 
           <ThemedText type="label">Members · {club.members.length}</ThemedText>
           <Card>
-            {club.members.map((name, i) => (
-              <View key={`${i}:${name}`} style={styles.member}>
-                <Avatar name={name} />
-                <ThemedText>{name}</ThemedText>
+            {club.members.map((member) => (
+              <View key={member.id} style={styles.member}>
+                <Avatar name={member.name} />
+                <ThemedText>{member.name}</ThemedText>
+                {member.isMe && <ThemedText type="muted">You</ThemedText>}
               </View>
             ))}
           </Card>
@@ -133,8 +128,6 @@ export default function ClubScreen() {
           <Button title="Create club" onPress={create} />
         </Card>
       )}
-
-      <Button title="Sign out" variant="danger" onPress={logout} />
     </Screen>
   );
 }
@@ -143,13 +136,4 @@ const styles = StyleSheet.create({
   spinner: { paddingVertical: 48 },
   error: { color: Colors.danger },
   member: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.accentSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: { color: Colors.accentLight, fontWeight: '700', fontSize: 15, lineHeight: 20 },
 });
