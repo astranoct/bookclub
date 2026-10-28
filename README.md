@@ -8,7 +8,7 @@ A small cross-platform app (iOS, Android, web) for reading with friends. Search 
 - A Home screen that greets you and shows every club you're in with the book each is reading
 - Search [Open Library](https://openlibrary.org/developers/api) by title, with a "wrong book?" picker for alternate matches
 - Manage clubs: create several, invite people by email, accept invites (by link or paste), and leave a club. Leaving as the only owner hands ownership to another member, and leaving as the last member deletes the club
-- Set a club's current book from the Search tab
+- Set a club's current book from the Search tab, choosing which club when you're in several
 - Profile screen to set a display name; club members are shown by name only, never by email
 - A dark, modern UI built on a small design system (`constants/Colors.ts`, `Button`, `Card`, `BookCard`)
 

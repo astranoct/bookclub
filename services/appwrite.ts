@@ -66,12 +66,6 @@ export async function getClubs() {
   return clubs;
 }
 
-/** The first club the current user belongs to, or null if they have none. */
-export async function getClub() {
-  const clubs = await getClubs();
-  return clubs[0] ?? null;
-}
-
 export function createClub(name: string) {
   return teams.create(ID.unique(), name, ['owner', 'member']);
 }

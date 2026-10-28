@@ -32,3 +32,26 @@ export function planLeave(memberships: MembershipInfo[], myUserId: string): Leav
   }
   return { action: 'leave' };
 }
+
+export type ShareTarget<T extends { id: string }> =
+  | { kind: 'none' }
+  | { kind: 'direct'; club: T }
+  | { kind: 'ask' };
+
+/**
+ * Decides which club a newly chosen book should go to.
+ * A club arrived at from its own card (`preferredId`) is used as-is, a user with a single
+ * club has no real choice, and anyone in several clubs is asked.
+ */
+export function resolveShareTarget<T extends { id: string }>(
+  clubs: T[],
+  preferredId?: string
+): ShareTarget<T> {
+  if (clubs.length === 0) return { kind: 'none' };
+
+  const preferred = preferredId ? clubs.find((c) => c.id === preferredId) : undefined;
+  if (preferred) return { kind: 'direct', club: preferred };
+
+  if (clubs.length === 1) return { kind: 'direct', club: clubs[0] };
+  return { kind: 'ask' };
+}
