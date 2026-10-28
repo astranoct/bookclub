@@ -1,4 +1,11 @@
-import { displayName, firstName, initialOf, MAX_NAME_LENGTH, validateName } from '../people';
+import {
+  displayName,
+  firstName,
+  hasRealName,
+  initialOf,
+  MAX_NAME_LENGTH,
+  validateName,
+} from '../people';
 
 describe('displayName', () => {
   it('trims a real name', () => {
@@ -10,6 +17,29 @@ describe('displayName', () => {
     expect(displayName('   ')).toBe('Unnamed reader');
     expect(displayName(undefined)).toBe('Unnamed reader');
     expect(displayName(null)).toBe('Unnamed reader');
+  });
+});
+
+describe('hasRealName', () => {
+  it('treats blank and email-shaped names as unnamed', () => {
+    expect(hasRealName('Ada')).toBe(true);
+    expect(hasRealName('')).toBe(false);
+    expect(hasRealName(undefined)).toBe(false);
+    expect(hasRealName('ada+1@example.com')).toBe(false);
+  });
+});
+
+describe('names that Appwrite filled in with an email', () => {
+  const email = 'ada+1@example.com';
+
+  it('never show the email', () => {
+    expect(displayName(email)).toBe('Unnamed reader');
+    expect(firstName(email)).toBe('');
+    expect(initialOf(email)).toBe('?');
+  });
+
+  it('cannot be saved as a display name', () => {
+    expect(validateName(email)).toMatch(/rather than an email/);
   });
 });
 

@@ -9,7 +9,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedTextInput } from '@/components/ThemedTextInput';
 import { Colors } from '@/constants/Colors';
 import { getCurrentUser, signOut, updateName } from '@/services/appwrite';
-import { displayName, validateName } from '@/utils/people';
+import { displayName, hasRealName, validateName } from '@/utils/people';
 
 interface Profile {
   name: string;
@@ -28,7 +28,7 @@ export default function ProfileScreen() {
     getCurrentUser().then((user) => {
       if (user) {
         setProfile({ name: user.name, email: user.email });
-        setName(user.name);
+        setName(hasRealName(user.name) ? user.name : '');
       }
       setLoading(false);
     });
@@ -45,7 +45,7 @@ export default function ProfileScreen() {
     try {
       const user = await updateName(name.trim());
       setProfile({ name: user.name, email: user.email });
-      setName(user.name);
+      setName(hasRealName(user.name) ? user.name : '');
       setFeedback({ ok: true, text: 'Name saved.' });
     } catch {
       setFeedback({ ok: false, text: 'Could not save your name. Try again.' });
@@ -68,7 +68,8 @@ export default function ProfileScreen() {
   }
 
   const isGuest = !profile?.email;
-  const unchanged = name.trim() === (profile?.name ?? '');
+  const currentName = hasRealName(profile?.name) ? profile.name : '';
+  const unchanged = name.trim() === currentName;
 
   return (
     <Screen>

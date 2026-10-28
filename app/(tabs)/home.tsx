@@ -9,7 +9,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { Colors } from '@/constants/Colors';
 import { getClubs, getCurrentBook, getCurrentUser } from '@/services/appwrite';
 import type { Book } from '@/types/book';
-import { firstName } from '@/utils/people';
+import { firstName, hasRealName } from '@/utils/people';
 
 interface ClubSummary {
   id: string;
@@ -22,6 +22,7 @@ export default function Home() {
   const router = useRouter();
   const [clubs, setClubs] = useState<ClubSummary[] | null>(null);
   const [greeting, setGreeting] = useState('Welcome back');
+  const [needsName, setNeedsName] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -30,6 +31,7 @@ export default function Home() {
       const [teamList, user] = await Promise.all([getClubs(), getCurrentUser()]);
       const name = firstName(user?.name);
       setGreeting(name ? `Hi, ${name}` : 'Welcome back');
+      setNeedsName(!!user && !hasRealName(user.name));
 
       const summaries = await Promise.all(
         teamList.map(async (team) => ({
@@ -75,6 +77,16 @@ export default function Home() {
       </View>
 
       {error && <ThemedText style={styles.error}>{error}</ThemedText>}
+
+      {needsName && (
+        <Card>
+          <ThemedText type="subtitle">Add your name</ThemedText>
+          <ThemedText type="muted">
+            Other members see you as "Unnamed reader" until you set a display name.
+          </ThemedText>
+          <Button title="Set display name" variant="secondary" onPress={() => router.push('/profile')} />
+        </Card>
+      )}
 
       {clubs.length === 0 ? (
         <Card>
