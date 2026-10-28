@@ -1,15 +1,24 @@
+import { useState } from 'react';
 import { StyleSheet, TextInput, type TextInputProps } from 'react-native';
 
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { Colors, Radius } from '@/constants/Colors';
 
-export function ThemedTextInput({ style, ...rest }: TextInputProps) {
-  const color = useThemeColor({}, 'text');
-  const borderColor = useThemeColor({}, 'icon');
+export function ThemedTextInput({ style, onFocus, onBlur, ...rest }: TextInputProps) {
+  const [focused, setFocused] = useState(false);
 
   return (
     <TextInput
-      placeholderTextColor={borderColor}
-      style={[styles.input, { color, borderColor }, style]}
+      placeholderTextColor={Colors.textMuted}
+      selectionColor={Colors.accentLight}
+      style={[styles.input, focused && styles.focused, style]}
+      onFocus={(e) => {
+        setFocused(true);
+        onFocus?.(e);
+      }}
+      onBlur={(e) => {
+        setFocused(false);
+        onBlur?.(e);
+      }}
       {...rest}
     />
   );
@@ -17,10 +26,16 @@ export function ThemedTextInput({ style, ...rest }: TextInputProps) {
 
 const styles = StyleSheet.create({
   input: {
-    height: 44,
+    height: 52,
     borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    borderColor: Colors.border,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surface,
+    color: Colors.text,
+    paddingHorizontal: 16,
     fontSize: 16,
+  },
+  focused: {
+    borderColor: Colors.accent,
   },
 });

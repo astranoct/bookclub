@@ -1,11 +1,13 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { ActivityIndicator, Button } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { BookCard } from '@/components/BookCard';
-import { Screen } from '@/components/Screen';
+import { Button } from '@/components/Button';
+import { Card, Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedTextInput } from '@/components/ThemedTextInput';
-import { ThemedView } from '@/components/ThemedView';
+import { Colors } from '@/constants/Colors';
 import { getClub, setCurrentBook } from '@/services/appwrite';
 import { searchForBook } from '@/services/openLibrary';
 import type { Book, SearchResult } from '@/types/book';
@@ -56,21 +58,45 @@ export default function BookSearch() {
 
   return (
     <Screen>
-      <ThemedTextInput
-        placeholder="Search for a book title"
-        value={query}
-        onChangeText={setQuery}
-        onSubmitEditing={search}
-        returnKeyType="search"
-      />
-      <Button title="Search" onPress={search} disabled={loading} />
+      <View style={styles.searchRow}>
+        <View style={styles.inputWrap}>
+          <MaterialIcons name="search" size={22} color={Colors.textMuted} style={styles.searchIcon} />
+          <ThemedTextInput
+            placeholder="Search for a book title"
+            value={query}
+            onChangeText={setQuery}
+            onSubmitEditing={search}
+            returnKeyType="search"
+            style={styles.input}
+          />
+        </View>
+      </View>
+      <Button title="Search" onPress={search} loading={loading} />
 
-      {loading && <ActivityIndicator />}
-      {message && <ThemedText>{message}</ThemedText>}
+      {message && (
+        <View style={styles.message}>
+          <ThemedText type="muted" style={styles.messageText}>
+            {message}
+          </ThemedText>
+        </View>
+      )}
+
+      {!selected && !loading && !message && (
+        <View style={styles.empty}>
+          <MaterialIcons name="menu-book" size={56} color={Colors.border} />
+          <ThemedText type="muted" style={styles.messageText}>
+            Search for a title to find your next read.
+          </ThemedText>
+        </View>
+      )}
+
+      {loading && <ActivityIndicator color={Colors.accentLight} style={styles.spinner} />}
 
       {selected && (
         <>
-          <BookCard book={selected} />
+          <Card>
+            <BookCard book={selected} />
+          </Card>
           <Button title="Set as club book" onPress={() => shareWithClub(selected)} />
         </>
       )}
@@ -79,17 +105,38 @@ export default function BookSearch() {
         <>
           <Button
             title={showAlternatives ? 'Hide other matches' : 'Wrong book?'}
+            variant="ghost"
             onPress={() => setShowAlternatives((shown) => !shown)}
           />
-          {showAlternatives &&
-            [result.best, ...result.alternatives].map((book, i) => (
-              <ThemedView key={`${i}:${book.title}`} style={{ gap: 8 }}>
-                <BookCard book={book} />
-                <Button title="Select" onPress={() => choose(book)} />
-              </ThemedView>
-            ))}
+          {showAlternatives && (
+            <>
+              <ThemedText type="label">Other matches</ThemedText>
+              {[result.best, ...result.alternatives].map((book, i) => (
+                <Pressable
+                  key={`${i}:${book.title}`}
+                  onPress={() => choose(book)}
+                  style={({ pressed }) => pressed && styles.pressed}>
+                  <Card>
+                    <BookCard book={book} variant="compact" />
+                  </Card>
+                </Pressable>
+              ))}
+            </>
+          )}
         </>
       )}
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  searchRow: { flexDirection: 'row' },
+  inputWrap: { flex: 1, justifyContent: 'center' },
+  searchIcon: { position: 'absolute', left: 14, zIndex: 1 },
+  input: { paddingLeft: 44 },
+  message: { paddingVertical: 4 },
+  messageText: { textAlign: 'center' },
+  empty: { alignItems: 'center', gap: 12, paddingVertical: 48 },
+  spinner: { paddingVertical: 24 },
+  pressed: { opacity: 0.8 },
+});

@@ -1,35 +1,38 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import React from 'react';
+
 import { HapticTab } from '@/components/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: true,
+        tabBarActiveTintColor: Colors.accentLight,
+        tabBarInactiveTintColor: Colors.textMuted,
         tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
+        tabBarStyle: {
+          backgroundColor: Colors.surface,
+          borderTopColor: Colors.border,
+        },
+        tabBarLabelStyle: { fontWeight: '600' },
+        headerStyle: { backgroundColor: Colors.background },
+        headerShadowVisible: false,
+        headerTitleStyle: { color: Colors.text, fontWeight: '700', fontSize: 20 },
         animation: 'shift',
       }}>
       <Tabs.Screen
         name="search"
         options={{
           title: 'Search',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="magnifyingglass" color={color} />,
+          tabBarIcon: ({ color }) => <MaterialIcons name="search" size={26} color={color} />,
         }}
       />
       <Tabs.Screen
         name="club"
         options={{
           title: 'Club',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.2.fill" color={color} />,
+          tabBarIcon: ({ color }) => <MaterialIcons name="groups" size={26} color={color} />,
         }}
       />
     </Tabs>

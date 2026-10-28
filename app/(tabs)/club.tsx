@@ -1,11 +1,13 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Button } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { BookCard } from '@/components/BookCard';
-import { Screen } from '@/components/Screen';
+import { Button } from '@/components/Button';
+import { Card, Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedTextInput } from '@/components/ThemedTextInput';
+import { Colors } from '@/constants/Colors';
 import {
   createClub,
   getClub,
@@ -20,6 +22,14 @@ interface ClubState {
   name: string;
   members: string[];
   book: Book | null;
+}
+
+function Avatar({ name }: { name: string }) {
+  return (
+    <View style={styles.avatar}>
+      <ThemedText style={styles.avatarText}>{name.trim().charAt(0).toUpperCase() || '?'}</ThemedText>
+    </View>
+  );
 }
 
 export default function ClubScreen() {
@@ -43,11 +53,11 @@ export default function ClubScreen() {
       setClub({
         id: found.$id,
         name: found.name,
-        members: members.map((m) => m.userName || m.userEmail),
+        members: members.map((m) => m.userName || m.userEmail || 'Guest reader'),
         book,
       });
     } catch {
-      setError('Could not load your club. Pull to retry by switching tabs.');
+      setError('Could not load your club. Switch tabs to retry.');
     } finally {
       setLoading(false);
     }
@@ -80,40 +90,66 @@ export default function ClubScreen() {
   if (loading) {
     return (
       <Screen>
-        <ActivityIndicator />
+        <ActivityIndicator color={Colors.accentLight} style={styles.spinner} />
       </Screen>
     );
   }
 
   return (
     <Screen>
-      {error && <ThemedText>{error}</ThemedText>}
+      {error && <ThemedText style={styles.error}>{error}</ThemedText>}
 
       {club ? (
         <>
-          <ThemedText type="title">{club.name}</ThemedText>
+          <View>
+            <ThemedText type="label">Your club</ThemedText>
+            <ThemedText type="title">{club.name}</ThemedText>
+          </View>
 
-          <ThemedText type="subtitle">Currently reading</ThemedText>
-          {club.book ? (
-            <BookCard book={club.book} />
-          ) : (
-            <ThemedText>No book chosen yet. Find one on the Search tab.</ThemedText>
-          )}
+          <ThemedText type="label">Currently reading</ThemedText>
+          <Card>
+            {club.book ? (
+              <BookCard book={club.book} />
+            ) : (
+              <ThemedText type="muted">No book chosen yet. Find one on the Search tab.</ThemedText>
+            )}
+          </Card>
 
-          <ThemedText type="subtitle">Members</ThemedText>
-          {club.members.map((name, i) => (
-            <ThemedText key={`${i}:${name}`}>{name}</ThemedText>
-          ))}
+          <ThemedText type="label">Members · {club.members.length}</ThemedText>
+          <Card>
+            {club.members.map((name, i) => (
+              <View key={`${i}:${name}`} style={styles.member}>
+                <Avatar name={name} />
+                <ThemedText>{name}</ThemedText>
+              </View>
+            ))}
+          </Card>
         </>
       ) : (
-        <>
-          <ThemedText type="subtitle">You are not in a club yet.</ThemedText>
+        <Card>
+          <ThemedText type="subtitle">Start a book club</ThemedText>
+          <ThemedText type="muted">You are not in a club yet. Name one to get started.</ThemedText>
           <ThemedTextInput placeholder="Club name" value={newName} onChangeText={setNewName} />
           <Button title="Create club" onPress={create} />
-        </>
+        </Card>
       )}
 
-      <Button title="Sign out" onPress={logout} />
+      <Button title="Sign out" variant="danger" onPress={logout} />
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  spinner: { paddingVertical: 48 },
+  error: { color: Colors.danger },
+  member: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.accentSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: { color: Colors.accentLight, fontWeight: '700', fontSize: 15, lineHeight: 20 },
+});

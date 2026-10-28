@@ -7,7 +7,7 @@ A small cross-platform app (iOS, Android, web) for reading with friends. Search 
 - Sign in with email, create an account, or continue as a guest
 - Search [Open Library](https://openlibrary.org/developers/api) by title, with a "wrong book?" picker for alternate matches
 - Create a club and share the current book with its members
-- Light and dark themes
+- A dark, modern UI built on a small design system (`constants/Colors.ts`, `Button`, `Card`, `BookCard`)
 
 ## Tech stack
 
@@ -45,8 +45,7 @@ app/            Screens and routes (login, tabs: search + club)
 components/     Shared UI (BookCard, Screen, themed text/inputs)
 services/       Appwrite and Open Library clients (+ tests)
 types/          Shared TypeScript types
-hooks/          Theme helpers
-constants/      Color palette
+constants/      Color palette and radii
 ```
 
 ## Roadmap
