@@ -9,6 +9,10 @@ A small cross-platform app (iOS, Android, web) for reading with friends. Search 
 - Search [Open Library](https://openlibrary.org/developers/api) by title, with a "wrong book?" picker for alternate matches
 - Manage clubs: create several, invite people by email, accept invites (by link or paste), and leave a club. Leaving as the only owner hands ownership to another member, and leaving as the last member deletes the club
 - Set a club's current book from the Search tab, choosing which club when you're in several
+- Shared reading progress: each member logs their page and everyone sees how far along the club is
+- Owners schedule the next meeting (date, time and a short note) for all members to see
+- Owners finish a book, which moves it to the club's finished list
+- Any member can suggest a book, and owners can pick from the suggestions
 - Profile screen to set a display name; club members are shown by name only, never by email
 - A dark, modern UI built on a small design system (`constants/Colors.ts`, `Button`, `Card`, `BookCard`)
 
@@ -44,6 +48,24 @@ In the Appwrite console for your project:
    - **Columns:** add a required `name` column. Use a text type of at most 128 characters; call it `name`.
 
 Display names live in `profiles` because Appwrite's own membership names can come back blank for other members. Appwrite also hides other members' user IDs, so there is one document per club membership (ID = membership ID), written by the member it belongs to. The collection holds names only, never emails. Any signed-in user can read it, so treat display names as visible to everyone using the app. Without the collection, the app still works but other members appear as "Unnamed reader".
+
+### Club roles
+
+- **Owners** choose or change the current book, finish it, schedule meetings, invite people, and pick from suggestions.
+- **Members** log their own progress and suggest one book at a time.
+
+Owner-controlled data (current book, meeting, finished books) is stored in the team's preferences, which only owners can change. Member-written data is stored in two more tables, one row per club membership, readable by that club's members and changeable only by the member it belongs to.
+
+To set those up, create two more tables in the same database (same steps as `profiles`: give the **Users** role **Create** only, and turn on **Row security**; no table-level Read is needed):
+
+| Table ID      | Columns (all required)                                            |
+| ------------- | ----------------------------------------------------------------- |
+| `progress`    | `clubId` (text), `bookKey` (text), `page` (integer, min 0)         |
+| `suggestions` | `clubId` (text), `book` (text, holds JSON, so use a long text type) |
+
+Without them the app still works. Progress and suggestions just won't save.
+
+A member of a club could, in theory, create the row for another member of the same club before they do. Preventing that would need a server function, which is out of scope here.
 
 ### Invites
 

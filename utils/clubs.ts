@@ -55,3 +55,20 @@ export function resolveShareTarget<T extends { id: string }>(
   if (clubs.length === 1) return { kind: 'direct', club: clubs[0] };
   return { kind: 'ask' };
 }
+
+/**
+ * The label for the button that puts a book into a club: owners set the current book while
+ * everyone else suggests one. A club arrived at from its own page decides it on its own.
+ */
+export function shareButtonTitle(
+  clubs: { id: string; isOwner: boolean }[],
+  preferredId?: string
+) {
+  const preferred = preferredId ? clubs.find((c) => c.id === preferredId) : undefined;
+  const scope = preferred ? [preferred] : clubs;
+
+  if (scope.length === 0) return 'Add to a club';
+  if (scope.every((c) => c.isOwner)) return 'Set as club book';
+  if (scope.every((c) => !c.isOwner)) return 'Suggest to club';
+  return 'Add to a club';
+}

@@ -1,4 +1,4 @@
-import { planLeave, resolveShareTarget, type MembershipInfo } from '../clubs';
+import { planLeave, resolveShareTarget, shareButtonTitle, type MembershipInfo } from '../clubs';
 
 const member = (
   userId: string,
@@ -57,5 +57,25 @@ describe('resolveShareTarget', () => {
 
   it('asks again if the preferred club is stale', () => {
     expect(resolveShareTarget([a, b], 'gone')).toEqual({ kind: 'ask' });
+  });
+});
+
+describe('shareButtonTitle', () => {
+  const owned = { id: 'a', isOwner: true };
+  const joined = { id: 'b', isOwner: false };
+
+  it('says set when you own every club and suggest when you own none', () => {
+    expect(shareButtonTitle([owned])).toBe('Set as club book');
+    expect(shareButtonTitle([joined])).toBe('Suggest to club');
+  });
+
+  it('is neutral for a mix of roles or no clubs', () => {
+    expect(shareButtonTitle([owned, joined])).toBe('Add to a club');
+    expect(shareButtonTitle([])).toBe('Add to a club');
+  });
+
+  it('follows the preferred club when one is given', () => {
+    expect(shareButtonTitle([owned, joined], 'a')).toBe('Set as club book');
+    expect(shareButtonTitle([owned, joined], 'b')).toBe('Suggest to club');
   });
 });

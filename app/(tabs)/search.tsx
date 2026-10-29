@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { BookCard } from '@/components/BookCard';
@@ -9,20 +9,19 @@ import { Card, Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedTextInput } from '@/components/ThemedTextInput';
 import { Colors, Radius } from '@/constants/Colors';
-import { getClubs, getCurrentBook, setCurrentBook } from '@/services/appwrite';
+import { getMyClubs, type MyClub } from '@/services/appwrite';
+import { getClubPrefs, saveSuggestion, setCurrentBook } from '@/services/clubData';
 import { searchForBook } from '@/services/openLibrary';
 import type { Book, SearchResult } from '@/types/book';
-import { resolveShareTarget } from '@/utils/clubs';
+import { resolveShareTarget, shareButtonTitle } from '@/utils/clubs';
 
-interface ClubOption {
-  id: string;
-  name: string;
+interface ClubOption extends MyClub {
   book: Book | null;
 }
 
 export default function BookSearch() {
   const router = useRouter();
-  // Set when arriving from a club card on Home, which means the club is already chosen.
+  // Set when arriving from a club's own page or card, which means the club is already chosen.
   const { clubId } = useLocalSearchParams<{ clubId?: string }>();
   const [query, setQuery] = useState('');
   const [result, setResult] = useState<SearchResult | null>(null);
@@ -32,6 +31,16 @@ export default function BookSearch() {
   const [message, setMessage] = useState<string | null>(null);
   const [findingClubs, setFindingClubs] = useState(false);
   const [picker, setPicker] = useState<ClubOption[] | null>(null);
+  const [myClubs, setMyClubs] = useState<MyClub[]>([]);
+
+  // Know your roles up front so the button can say "set" or "suggest" before it is pressed.
+  useFocusEffect(
+    useCallback(() => {
+      getMyClubs()
+        .then(setMyClubs)
+        .catch(() => setMyClubs([]));
+    }, [])
+  );
 
   async function search() {
     if (!query.trim()) return;
@@ -51,18 +60,35 @@ export default function BookSearch() {
     }
   }
 
-  async function setBookFor(book: Book, club: { id: string; name: string }) {
+  /** Owners set the club's book. Everyone else suggests it for the owner to choose. */
+  async function applyBook(book: Book, club: MyClub) {
     try {
-      await setCurrentBook(club.id, book);
+      if (club.isOwner) {
+        await setCurrentBook(club.id, book);
+        setMessage(`"${book.title}" is now the book for ${club.name}.`);
+      } else if (club.membershipId) {
+        await saveSuggestion(
+          { membershipId: club.membershipId, userId: club.userId, clubId: club.id },
+          book
+        );
+        setMessage(`Suggested "${book.title}" to ${club.name}.`);
+      } else {
+        setMessage(`You're not a member of ${club.name} yet.`);
+        return;
+      }
+
       setPicker(null);
-      setMessage(`"${book.title}" is now the book for ${club.name}.`);
       if (clubId) {
         // Clear the target so later visits to this tab don't silently reuse it.
         router.setParams({ clubId: undefined });
-        router.navigate('/home');
+        router.navigate({ pathname: '/club/[id]', params: { id: club.id } });
       }
     } catch {
-      setMessage('Could not update the club book. Try again.');
+      setMessage(
+        club.isOwner
+          ? 'Could not update the club book. Try again.'
+          : "Could not save your suggestion. Check that the club's suggestions table is set up."
+      );
     }
   }
 
@@ -72,18 +98,19 @@ export default function BookSearch() {
     setMessage(null);
     setPicker(null);
     try {
-      const clubs = (await getClubs()).map((c) => ({ id: c.$id, name: c.name }));
+      const clubs = await getMyClubs();
+      setMyClubs(clubs);
       const target = resolveShareTarget(clubs, clubId);
 
       if (target.kind === 'none') {
         setMessage('Create or join a club first (Clubs tab).');
       } else if (target.kind === 'direct') {
-        await setBookFor(book, target.club);
+        await applyBook(book, target.club);
       } else {
         const options = await Promise.all(
           clubs.map(async (club) => ({
             ...club,
-            book: await getCurrentBook(club.id).catch(() => null),
+            book: (await getClubPrefs(club.id).catch(() => null))?.currentBook ?? null,
           }))
         );
         setPicker(options);
@@ -143,7 +170,7 @@ export default function BookSearch() {
             <BookCard book={selected} />
           </Card>
           <Button
-            title="Set as club book"
+            title={shareButtonTitle(myClubs, clubId)}
             onPress={() => requestShare(selected)}
             loading={findingClubs}
           />
@@ -154,7 +181,7 @@ export default function BookSearch() {
               {picker.map((option) => (
                 <Pressable
                   key={option.id}
-                  onPress={() => setBookFor(selected, option)}
+                  onPress={() => applyBook(selected, option)}
                   style={({ pressed }) => [styles.option, pressed && styles.pressed]}>
                   <View style={styles.optionText}>
                     <ThemedText style={styles.optionName} numberOfLines={1}>
@@ -162,6 +189,9 @@ export default function BookSearch() {
                     </ThemedText>
                     <ThemedText type="muted" numberOfLines={1}>
                       {option.book ? `Reading: ${option.book.title}` : 'No book yet'}
+                    </ThemedText>
+                    <ThemedText style={styles.optionAction} numberOfLines={1}>
+                      {option.isOwner ? 'Set as the club book' : 'Suggest to the club'}
                     </ThemedText>
                   </View>
                   <MaterialIcons name="chevron-right" size={24} color={Colors.textMuted} />
@@ -221,4 +251,5 @@ const styles = StyleSheet.create({
   },
   optionText: { flex: 1, gap: 2 },
   optionName: { fontWeight: '700' },
+  optionAction: { color: Colors.accentLight, fontSize: 13, lineHeight: 18 },
 });
