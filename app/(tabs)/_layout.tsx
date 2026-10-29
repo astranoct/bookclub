@@ -1,36 +1,52 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import React from 'react';
-import { Platform } from 'react-native';
+
 import { HapticTab } from '@/components/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: true,
+        tabBarActiveTintColor: Colors.accentLight,
+        tabBarInactiveTintColor: Colors.textMuted,
         tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
+        tabBarStyle: {
+          backgroundColor: Colors.surface,
+          borderTopColor: Colors.border,
+        },
+        tabBarLabelStyle: { fontWeight: '600' },
+        headerStyle: { backgroundColor: Colors.background },
+        headerShadowVisible: false,
+        headerTitleStyle: { color: Colors.text, fontWeight: '700', fontSize: 20 },
         animation: 'shift',
       }}>
       <Tabs.Screen
-        name="search"
+        name="home"
         options={{
-          title: 'Book Search',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Home',
+          tabBarIcon: ({ color }) => <MaterialIcons name="home" size={26} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="teamView"
+        name="search"
         options={{
-          title: 'Book Club',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Search',
+          tabBarIcon: ({ color }) => <MaterialIcons name="search" size={26} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="clubs"
+        options={{
+          title: 'Clubs',
+          tabBarIcon: ({ color }) => <MaterialIcons name="groups" size={26} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color }) => <MaterialIcons name="person" size={26} color={color} />,
         }}
       />
     </Tabs>

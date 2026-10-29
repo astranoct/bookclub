@@ -1,72 +1,50 @@
-import { BookData } from "@/types/BookData";
-import { SearchResult } from "@/types/searchResult";
+import type { Book, SearchResult } from '@/types/book';
 
-const headers = new Headers({
-  "User-Agent": "BookClubApp/1.0 (boosterlongstrong@gmail.com)"
-});
+const SEARCH_URL = 'https://openlibrary.org/search.json';
+const MAX_ALTERNATIVES = 4;
 
-// export async function fetchBookTitleAndCover(title:string): Promise<[JSON, string]> {
-//   try {
-//     const response = await fetch('https://openlibrary.org/search.json?q=' + title, { headers });
-//     const data = await response.json();
-//     return [data.docs[0], `https://covers.openlibrary.org/b/id/${data.docs[0].cover_i}-L.jpg`];
-//   } catch (error) {
-//     console.error('Error fetching book data:', error);
-//     throw error;
-//   }
-// }
+interface OpenLibraryDoc {
+  title: string;
+  author_name?: string[];
+  cover_i?: number;
+  number_of_pages_median?: number;
+  first_publish_year?: number;
+  ratings_average?: number;
+}
 
-// export async function fetchBookData(query:string): Promise<BookData> {
-//   try {
-//     const response = await fetch('https://openlibrary.org/search.json?q=' + query, { headers });
-//     const data = await response.json();
-//     const bookData = data.docs[0];
+export function coverUrl(coverId: number | undefined, size: 'S' | 'M' | 'L' = 'L') {
+  return coverId ? `https://covers.openlibrary.org/b/id/${coverId}-${size}.jpg` : undefined;
+}
 
-//     return {
-//       title: bookData.title,
-//       author: bookData.author_name[0],
-//       coverId: bookData.cover_i,
-//       pageCount: bookData.number_of_pages_median,
-//       publishDate: bookData.first_publish_year,
-//       ratingsAverage: bookData.ratings_average.toFixed(2),
-//     }
-//   }
-//   catch (error) {
-//     console.error('Error fetching book data:', error);
-//     throw error;
-//   }
-// }
+export function toBook(doc: OpenLibraryDoc): Book {
+  return {
+    title: doc.title,
+    author: doc.author_name?.[0] ?? 'Unknown author',
+    coverId: doc.cover_i,
+    pageCount: doc.number_of_pages_median,
+    firstPublishYear: doc.first_publish_year,
+    ratingsAverage: doc.ratings_average,
+  };
+}
 
-export async function searchForBook(query:string): Promise<SearchResult> {
-  try {
-    const response = await fetch('https://openlibrary.org/search.json?q=' + query, { headers });
-    const data = await response.json();
-    const bookData = data.docs[0];
-    const numberOfResults = data.docs.length;
-    const numberOfShownResults = numberOfResults > 5 ? 5 : numberOfResults;
-    return {
-      mostLikelyResult: {
-        title: bookData.title,
-        author: bookData?.author_name[0],
-        coverId: bookData.cover_i,
-        pageCount: bookData?.number_of_pages_median,
-        publishDate: bookData?.first_publish_year,
-        ratingsAverage: bookData.ratings_average ? bookData.ratings_average.toFixed(2) : 0,
-      },
-      possibleResults: data.docs.slice(1, numberOfShownResults).map((data: any) => {
-        return {
-          title: data.title,
-          author: data?.author_name[0],
-          coverId: data.cover_i,
-          pageCount: data?.number_of_pages_median,
-          publishDate: data?.first_publish_year,
-          ratingsAverage: data.ratings_average ? data.ratings_average.toFixed(2) : 0,
-        };
-      }),
-    }
+/** Searches Open Library. Returns null when nothing matches. */
+export async function searchForBook(query: string): Promise<SearchResult | null> {
+  const params = new URLSearchParams({
+    q: query,
+    limit: String(MAX_ALTERNATIVES + 1),
+    fields: 'title,author_name,cover_i,number_of_pages_median,first_publish_year,ratings_average',
+  });
+
+  const response = await fetch(`${SEARCH_URL}?${params}`);
+  if (!response.ok) {
+    throw new Error(`Open Library search failed (${response.status})`);
   }
-  catch (error) {
-    console.error('Error fetching book data:', error);
-    throw error;
+
+  const { docs }: { docs: OpenLibraryDoc[] } = await response.json();
+  if (docs.length === 0) {
+    return null;
   }
+
+  const [best, ...alternatives] = docs.map(toBook);
+  return { best, alternatives };
 }

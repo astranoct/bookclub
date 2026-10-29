@@ -1,50 +1,76 @@
-# Welcome to your Expo app 👋
+# Book Club
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A small cross-platform app (iOS, Android, web) for reading with friends. Search for a book, set it as your club's current read, and see what everyone is reading together.
 
-## Get started
+## Features
 
-1. Install dependencies
+- Sign in with email, create an account, or continue as a guest
+- A Home screen that greets you and shows every club you're in with the book each is reading
+- Search [Open Library](https://openlibrary.org/developers/api) by title, with a "wrong book?" picker for alternate matches
+- Manage clubs: create several, invite people by email, accept invites (by link or paste), and leave a club. Leaving as the only owner hands ownership to another member, and leaving as the last member deletes the club
+- Set a club's current book from the Search tab, choosing which club when you're in several
+- Profile screen to set a display name; club members are shown by name only, never by email
+- A dark, modern UI built on a small design system (`constants/Colors.ts`, `Button`, `Card`, `BookCard`)
 
-   ```bash
-   npm install
-   ```
+## Tech stack
 
-2. Start the app
+- [Expo](https://expo.dev) (SDK 52) and React Native, with [Expo Router](https://docs.expo.dev/router/introduction) for file-based routing
+- TypeScript in strict mode
+- [Appwrite](https://appwrite.io) for authentication and clubs (Teams; the current book is stored in the team's preferences)
+- Open Library Search API for book data and covers
+- Jest with `jest-expo` for tests
 
-   ```bash
-    npx expo start
-   ```
+## Getting started
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+You need Node 18+ and an Appwrite project (Appwrite Cloud's free tier works) with a platform registered for the app's bundle/package ID.
 
 ```bash
-npm run reset-project
+npm install
+cp .env.example .env.local   # then fill in your Appwrite project ID and endpoint
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Open it in Expo Go, an emulator, or the browser (press `w`).
 
-## Learn more
+### Appwrite setup
 
-To learn more about developing your project with Expo, look at the following resources:
+In the Appwrite console for your project:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+1. **Platforms:** add an Android platform with package name `com.boosterlong.bookclub` (and a Web platform for `localhost` if you want the browser build).
+2. **Auth → Settings:** enable Email/Password and Anonymous sessions.
+3. **Auth → Policies → Memberships → Privacy:** tick **Email** (and MFA status). Emails then aren't sent to other club members.
+4. **Databases:** create a database and note its ID (if it isn't `bookclub`, set `EXPO_PUBLIC_APPWRITE_DATABASE_ID`). Inside it, create a table (called a collection in older consoles) with the ID `profiles`:
+   - **Settings → Permissions:** give the **Users** role **Create** and **Read**, and turn on **Row security** (Document security in older consoles).
+   - **Columns:** add a required `name` column. Use a text type of at most 128 characters; call it `name`.
 
-## Join the community
+Display names live in `profiles` because Appwrite's own membership names can come back blank for other members. Appwrite also hides other members' user IDs, so there is one document per club membership (ID = membership ID), written by the member it belongs to. The collection holds names only, never emails. Any signed-in user can read it, so treat display names as visible to everyone using the app. Without the collection, the app still works but other members appear as "Unnamed reader".
 
-Join our community of developers creating universal apps.
+### Invites
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Owners invite by email from a club's page. Appwrite emails a link that opens the app at `/invite`, which accepts it. Appwrite only allows redirect URLs on hosts registered as platforms in your project, so if sending an invite is rejected, register a Web platform and set `EXPO_PUBLIC_INVITE_URL` (see `.env.example`). Members can always paste the emailed link into **Clubs > Join with an invite link**.
+
+### Scripts
+
+| Command             | What it does                  |
+| ------------------- | ----------------------------- |
+| `npm start`         | Start the Expo dev server     |
+| `npm test`          | Run the Jest tests            |
+| `npm run typecheck` | Type-check with `tsc`         |
+| `npm run lint`      | Lint with `expo lint`         |
+
+## Project structure
+
+```
+app/            Screens and routes (login, invite, club detail, tabs: home, search, clubs, profile)
+components/     Shared UI (BookCard, Screen, themed text/inputs)
+services/       Appwrite and Open Library clients (+ tests)
+utils/          Small pure helpers (+ tests)
+types/          Shared TypeScript types
+constants/      Color palette and radii
+```
+
+## Roadmap
+
+- Join an existing club by invite instead of only creating one
+- Reading history (previous books) per club
+- Per-member progress and discussion notes
