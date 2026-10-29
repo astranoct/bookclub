@@ -1,5 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
@@ -13,7 +13,7 @@ import { getMyClubs, type MyClub } from '@/services/appwrite';
 import { getClubPrefs, saveSuggestion, setCurrentBook } from '@/services/clubData';
 import { searchForBook } from '@/services/openLibrary';
 import type { Book, SearchResult } from '@/types/book';
-import { resolveShareTarget, shareButtonTitle } from '@/utils/clubs';
+import { resolveShareTarget, shareButtons } from '@/utils/clubs';
 
 interface ClubOption extends MyClub {
   book: Book | null;
@@ -21,8 +21,11 @@ interface ClubOption extends MyClub {
 
 export default function BookSearch() {
   const router = useRouter();
+  const navigation = useNavigation();
   // Set when arriving from a club's own page or card, which means the club is already chosen.
-  const { clubId } = useLocalSearchParams<{ clubId?: string }>();
+  // `mode=suggest` comes from a "suggest a book" button and means never replace the current book.
+  const { clubId, mode } = useLocalSearchParams<{ clubId?: string; mode?: string }>();
+  const suggestOnly = mode === 'suggest';
   const [query, setQuery] = useState('');
   const [result, setResult] = useState<SearchResult | null>(null);
   const [selected, setSelected] = useState<Book | null>(null);
@@ -31,6 +34,7 @@ export default function BookSearch() {
   const [message, setMessage] = useState<string | null>(null);
   const [findingClubs, setFindingClubs] = useState(false);
   const [picker, setPicker] = useState<ClubOption[] | null>(null);
+  const [pickerSuggests, setPickerSuggests] = useState(false);
   const [myClubs, setMyClubs] = useState<MyClub[]>([]);
 
   // Know your roles up front so the button can say "set" or "suggest" before it is pressed.
@@ -39,7 +43,10 @@ export default function BookSearch() {
       getMyClubs()
         .then(setMyClubs)
         .catch(() => setMyClubs([]));
-    }, [])
+
+      // Forget where we were sent from once we leave, so the tab doesn't reuse it later.
+      return () => navigation.setParams({ clubId: undefined, mode: undefined } as never);
+    }, [navigation])
   );
 
   async function search() {
@@ -60,10 +67,10 @@ export default function BookSearch() {
     }
   }
 
-  /** Owners set the club's book. Everyone else suggests it for the owner to choose. */
-  async function applyBook(book: Book, club: MyClub) {
+  /** Owners set the club's book unless asked to suggest. Everyone else suggests it. */
+  async function applyBook(book: Book, club: MyClub, suggest: boolean) {
     try {
-      if (club.isOwner) {
+      if (club.isOwner && !suggest) {
         await setCurrentBook(club.id, book);
         setMessage(`"${book.title}" is now the book for ${club.name}.`);
       } else if (club.membershipId) {
@@ -80,12 +87,12 @@ export default function BookSearch() {
       setPicker(null);
       if (clubId) {
         // Clear the target so later visits to this tab don't silently reuse it.
-        router.setParams({ clubId: undefined });
+        router.setParams({ clubId: undefined, mode: undefined });
         router.navigate({ pathname: '/club/[id]', params: { id: club.id } });
       }
     } catch {
       setMessage(
-        club.isOwner
+        club.isOwner && !suggest
           ? 'Could not update the club book. Try again.'
           : "Could not save your suggestion. Check that the club's suggestions table is set up."
       );
@@ -93,10 +100,11 @@ export default function BookSearch() {
   }
 
   /** Applies the book straight away when the club is obvious, otherwise asks which one. */
-  async function requestShare(book: Book) {
+  async function requestShare(book: Book, suggest: boolean) {
     setFindingClubs(true);
     setMessage(null);
     setPicker(null);
+    setPickerSuggests(suggest);
     try {
       const clubs = await getMyClubs();
       setMyClubs(clubs);
@@ -105,7 +113,7 @@ export default function BookSearch() {
       if (target.kind === 'none') {
         setMessage('Create or join a club first (Clubs tab).');
       } else if (target.kind === 'direct') {
-        await applyBook(book, target.club);
+        await applyBook(book, target.club, suggest);
       } else {
         const options = await Promise.all(
           clubs.map(async (club) => ({
@@ -121,6 +129,8 @@ export default function BookSearch() {
       setFindingClubs(false);
     }
   }
+
+  const buttons = shareButtons(myClubs, clubId, suggestOnly);
 
   function choose(book: Book) {
     setSelected(book);
@@ -170,10 +180,18 @@ export default function BookSearch() {
             <BookCard book={selected} />
           </Card>
           <Button
-            title={shareButtonTitle(myClubs, clubId)}
-            onPress={() => requestShare(selected)}
+            title={buttons.primary}
+            onPress={() => requestShare(selected, suggestOnly)}
             loading={findingClubs}
           />
+          {buttons.secondary && (
+            <Button
+              title={buttons.secondary}
+              variant="secondary"
+              disabled={findingClubs}
+              onPress={() => requestShare(selected, true)}
+            />
+          )}
           {picker && (
             <Card>
               <ThemedText type="subtitle">Which club?</ThemedText>
@@ -181,7 +199,7 @@ export default function BookSearch() {
               {picker.map((option) => (
                 <Pressable
                   key={option.id}
-                  onPress={() => applyBook(selected, option)}
+                  onPress={() => applyBook(selected, option, pickerSuggests)}
                   style={({ pressed }) => [styles.option, pressed && styles.pressed]}>
                   <View style={styles.optionText}>
                     <ThemedText style={styles.optionName} numberOfLines={1}>
@@ -191,7 +209,7 @@ export default function BookSearch() {
                       {option.book ? `Reading: ${option.book.title}` : 'No book yet'}
                     </ThemedText>
                     <ThemedText style={styles.optionAction} numberOfLines={1}>
-                      {option.isOwner ? 'Set as the club book' : 'Suggest to the club'}
+                      {option.isOwner && !pickerSuggests ? 'Set as the club book' : 'Suggest to the club'}
                     </ThemedText>
                   </View>
                   <MaterialIcons name="chevron-right" size={24} color={Colors.textMuted} />

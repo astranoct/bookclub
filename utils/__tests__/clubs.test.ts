@@ -1,4 +1,10 @@
-import { planLeave, resolveShareTarget, shareButtonTitle, type MembershipInfo } from '../clubs';
+import {
+  planLeave,
+  resolveShareTarget,
+  shareButtons,
+  shareButtonTitle,
+  type MembershipInfo,
+} from '../clubs';
 
 const member = (
   userId: string,
@@ -77,5 +83,30 @@ describe('shareButtonTitle', () => {
   it('follows the preferred club when one is given', () => {
     expect(shareButtonTitle([owned, joined], 'a')).toBe('Set as club book');
     expect(shareButtonTitle([owned, joined], 'b')).toBe('Suggest to club');
+  });
+});
+
+describe('shareButtons', () => {
+  const owned = { id: 'a', isOwner: true };
+  const joined = { id: 'b', isOwner: false };
+
+  it('lets an owner suggest instead of setting', () => {
+    expect(shareButtons([owned])).toEqual({ primary: 'Set as club book', secondary: 'Suggest instead' });
+  });
+
+  it('offers only suggesting to someone who owns nothing', () => {
+    expect(shareButtons([joined])).toEqual({ primary: 'Suggest to club', secondary: null });
+  });
+
+  it('offers the extra suggest button when any club in scope is owned', () => {
+    expect(shareButtons([owned, joined]).secondary).toBe('Suggest instead');
+    expect(shareButtons([owned, joined], 'b').secondary).toBeNull();
+  });
+
+  it('never sets the book when opened to suggest', () => {
+    expect(shareButtons([owned, joined], 'a', true)).toEqual({
+      primary: 'Suggest to club',
+      secondary: null,
+    });
   });
 });

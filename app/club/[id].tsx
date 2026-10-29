@@ -101,8 +101,12 @@ export default function ClubDetail() {
   const nameOf = (membershipId: string) =>
     members.find((m) => m.id === membershipId)?.name ?? 'a member';
 
-  function findBook() {
-    router.push({ pathname: '/search', params: { clubId: id } });
+  /** `suggest` means the chosen book is only a suggestion, even for an owner. */
+  function findBook(suggest = false) {
+    router.push({
+      pathname: '/search',
+      params: suggest ? { clubId: id, mode: 'suggest' } : { clubId: id },
+    });
   }
 
   async function saveMyProgress(page: number) {
@@ -213,7 +217,7 @@ export default function ClubDetail() {
       <CurrentBookCard
         book={book}
         isOwner={iAmOwner}
-        onChangeBook={findBook}
+        onChangeBook={() => findBook()}
         onFinish={finishBook}
       />
 
@@ -235,7 +239,7 @@ export default function ClubDetail() {
         hasCurrentBook={!!book}
         onChoose={chooseSuggestion}
         onRemoveMine={removeMySuggestion}
-        onFindBook={findBook}
+        onFindBook={() => findBook(true)}
       />
 
       <FinishedBooksCard books={prefs.finishedBooks ?? []} />

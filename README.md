@@ -53,6 +53,7 @@ Display names live in `profiles` because Appwrite's own membership names can com
 
 - **Owners** choose or change the current book, finish it, schedule meetings, invite people, and pick from suggestions.
 - **Members** log their own progress and suggest one book at a time.
+- Owners can suggest a book too. Searching from a club's **Find a book to suggest** button only ever adds a suggestion, so it can't replace the current book.
 
 Owner-controlled data (current book, meeting, finished books) is stored in the team's preferences, which only owners can change. Member-written data is stored in two more tables, one row per club membership, readable by that club's members and changeable only by the member it belongs to.
 

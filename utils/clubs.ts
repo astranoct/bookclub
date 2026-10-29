@@ -72,3 +72,23 @@ export function shareButtonTitle(
   if (scope.every((c) => !c.isOwner)) return 'Suggest to club';
   return 'Add to a club';
 }
+
+/**
+ * The buttons shown under a chosen book. Owners set the club's book by default but can also
+ * suggest instead, so choosing a book to suggest never replaces the current one by accident.
+ * `suggestOnly` is used when the screen was opened from a "suggest a book" button.
+ */
+export function shareButtons(
+  clubs: { id: string; isOwner: boolean }[],
+  preferredId?: string,
+  suggestOnly = false
+): { primary: string; secondary: string | null } {
+  if (suggestOnly) return { primary: 'Suggest to club', secondary: null };
+
+  const preferred = preferredId ? clubs.find((c) => c.id === preferredId) : undefined;
+  const scope = preferred ? [preferred] : clubs;
+  return {
+    primary: shareButtonTitle(clubs, preferredId),
+    secondary: scope.some((c) => c.isOwner) ? 'Suggest instead' : null,
+  };
+}
