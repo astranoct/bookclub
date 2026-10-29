@@ -101,7 +101,7 @@ Account deletion and the support form run as small Appwrite Functions. See [`fun
 npx expo start
 ```
 
-Open it in Expo Go on your phone, an emulator, or the browser (press `w`). The login screen has a **connection check** that confirms your endpoint, project ID and platform are all correct.
+Open it in Expo Go on your phone, an emulator, or the browser (press `w`).
 
 ### Sending invites
 

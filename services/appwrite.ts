@@ -38,15 +38,6 @@ export const teams = new Teams(client);
 export const databases = new Databases(client);
 export const functions = new Functions(client);
 
-/**
- * Verifies the endpoint, project ID and registered platform are all correct.
- * react-native-appwrite 0.5 predates `client.ping()` (newer SDKs need Expo SDK 53+),
- * so this makes the same request ping() does.
- */
-export async function pingAppwrite() {
-  await client.call('get', new URL(`${endpoint}/ping`));
-}
-
 export async function getCurrentUser() {
   try {
     return await account.get();

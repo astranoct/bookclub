@@ -8,9 +8,7 @@ import { Card, Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedTextInput } from '@/components/ThemedTextInput';
 import { Colors, Radius } from '@/constants/Colors';
-import { pingAppwrite, register, signIn, signInAnonymously } from '@/services/appwrite';
-
-type PingStatus = { ok: boolean; message: string } | null;
+import { register, signIn, signInAnonymously } from '@/services/appwrite';
 
 export default function Login() {
   const router = useRouter();
@@ -18,7 +16,6 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [pingStatus, setPingStatus] = useState<PingStatus>(null);
 
   async function run(action: () => Promise<unknown>) {
     setBusy(true);
@@ -30,19 +27,6 @@ export default function Login() {
       setError(e instanceof Error ? e.message : 'Something went wrong.');
     } finally {
       setBusy(false);
-    }
-  }
-
-  async function checkConnection() {
-    setPingStatus({ ok: true, message: 'Checking...' });
-    try {
-      await pingAppwrite();
-      setPingStatus({ ok: true, message: 'Connected to Appwrite' });
-    } catch (e) {
-      setPingStatus({
-        ok: false,
-        message: e instanceof Error ? e.message : 'Could not reach Appwrite.',
-      });
     }
   }
 
@@ -90,23 +74,6 @@ export default function Login() {
         disabled={busy}
         onPress={() => run(signInAnonymously)}
       />
-
-      <View style={styles.footer}>
-        <Button title="Check Appwrite connection" variant="ghost" onPress={checkConnection} />
-        {pingStatus && (
-          <View style={styles.status}>
-            <View
-              style={[
-                styles.dot,
-                { backgroundColor: pingStatus.ok ? Colors.success : Colors.danger },
-              ]}
-            />
-            <ThemedText type="muted" style={styles.statusText}>
-              {pingStatus.message}
-            </ThemedText>
-          </View>
-        )}
-      </View>
     </Screen>
   );
 }
@@ -123,8 +90,4 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   error: { color: Colors.danger, fontSize: 14, lineHeight: 20 },
-  footer: { alignItems: 'center', gap: 4 },
-  status: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12 },
-  statusText: { flexShrink: 1 },
-  dot: { width: 8, height: 8, borderRadius: 4 },
 });
