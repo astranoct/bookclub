@@ -9,7 +9,7 @@ Built with React Native, Expo and TypeScript, with [Appwrite](https://appwrite.i
 ## What it does
 
 - **Home** greets you and lists every club you belong to: the book each one is reading, your own progress, and the next meeting
-- **Search** looks up any book by title using [Open Library](https://openlibrary.org/developers/api). If the first match is the wrong edition, a "wrong book?" picker shows alternates. Owners set the result as a club's current book, and members suggest it
+- **Book search** isn't a tab. It opens from a club when you choose or suggest a book, and looks up any title using [Open Library](https://openlibrary.org/developers/api). If the first match is the wrong edition, a "wrong book?" picker shows alternates. Owners set the result as the club's current book, and members suggest it
 - **Clubs** lets you create as many clubs as you like, invite people by email, join with an invite link, and leave a club. Each club's page brings it together:
   - the current book, which owners can finish to move it to the club's finished list
   - everyone's reading progress, where each member logs their own page
@@ -111,7 +111,7 @@ Owners invite people by email from a club's page. Appwrite only allows redirect 
 ## Project structure
 
 ```
-app/            Screens and routes (login, invite, club detail, tabs: home, search, clubs, profile)
+app/            Screens and routes (login, invite, club detail, book search, tabs: home, clubs, profile)
 components/     Shared UI (BookCard, Screen, themed text and inputs) and the club page cards in club/
 services/       Appwrite and Open Library clients (+ tests)
 utils/          Small pure helpers (+ tests)

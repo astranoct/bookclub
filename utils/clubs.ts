@@ -33,62 +33,17 @@ export function planLeave(memberships: MembershipInfo[], myUserId: string): Leav
   return { action: 'leave' };
 }
 
-export type ShareTarget<T extends { id: string }> =
-  | { kind: 'none' }
-  | { kind: 'direct'; club: T }
-  | { kind: 'ask' };
+export type ShareAction = 'set' | 'suggest';
 
 /**
- * Decides which club a newly chosen book should go to.
- * A club arrived at from its own card (`preferredId`) is used as-is, a user with a single
- * club has no real choice, and anyone in several clubs is asked.
+ * What choosing a book does for a club. Owners set the club's book, but can also suggest
+ * instead, and everyone else can only suggest. `suggestOnly` is used when the screen was
+ * opened from a "suggest a book" button, so that can never replace the current book.
  */
-export function resolveShareTarget<T extends { id: string }>(
-  clubs: T[],
-  preferredId?: string
-): ShareTarget<T> {
-  if (clubs.length === 0) return { kind: 'none' };
-
-  const preferred = preferredId ? clubs.find((c) => c.id === preferredId) : undefined;
-  if (preferred) return { kind: 'direct', club: preferred };
-
-  if (clubs.length === 1) return { kind: 'direct', club: clubs[0] };
-  return { kind: 'ask' };
-}
-
-/**
- * The label for the button that puts a book into a club: owners set the current book while
- * everyone else suggests one. A club arrived at from its own page decides it on its own.
- */
-export function shareButtonTitle(
-  clubs: { id: string; isOwner: boolean }[],
-  preferredId?: string
-) {
-  const preferred = preferredId ? clubs.find((c) => c.id === preferredId) : undefined;
-  const scope = preferred ? [preferred] : clubs;
-
-  if (scope.length === 0) return 'Add to a club';
-  if (scope.every((c) => c.isOwner)) return 'Set as club book';
-  if (scope.every((c) => !c.isOwner)) return 'Suggest to club';
-  return 'Add to a club';
-}
-
-/**
- * The buttons shown under a chosen book. Owners set the club's book by default but can also
- * suggest instead, so choosing a book to suggest never replaces the current one by accident.
- * `suggestOnly` is used when the screen was opened from a "suggest a book" button.
- */
-export function shareButtons(
-  clubs: { id: string; isOwner: boolean }[],
-  preferredId?: string,
+export function shareActions(
+  isOwner: boolean,
   suggestOnly = false
-): { primary: string; secondary: string | null } {
-  if (suggestOnly) return { primary: 'Suggest to club', secondary: null };
-
-  const preferred = preferredId ? clubs.find((c) => c.id === preferredId) : undefined;
-  const scope = preferred ? [preferred] : clubs;
-  return {
-    primary: shareButtonTitle(clubs, preferredId),
-    secondary: scope.some((c) => c.isOwner) ? 'Suggest instead' : null,
-  };
+): { primary: ShareAction; secondary: ShareAction | null } {
+  if (!isOwner || suggestOnly) return { primary: 'suggest', secondary: null };
+  return { primary: 'set', secondary: 'suggest' };
 }

@@ -152,6 +152,30 @@ export interface MyClub {
   isOwner: boolean;
 }
 
+async function describeMyClub(club: Models.Team<Models.Preferences>, userId: string | undefined) {
+  let membershipId: string | null = null;
+  let owner = false;
+  try {
+    const { memberships } = await teams.listMemberships(club.$id);
+    const mine = memberships.find((m) => m.userId === userId);
+    if (mine) {
+      membershipId = mine.$id;
+      owner = isOwner(mine);
+    }
+  } catch {
+    // Leave the role unknown; the caller treats that as a regular member.
+  }
+  const result: MyClub = {
+    id: club.$id,
+    name: club.name,
+    memberCount: club.total,
+    userId: userId ?? '',
+    membershipId,
+    isOwner: owner,
+  };
+  return result;
+}
+
 /**
  * Every club the signed-in user belongs to, with their own membership ID and role in each.
  * Appwrite hides other members' user IDs but not your own, so your membership is the one
@@ -159,30 +183,18 @@ export interface MyClub {
  */
 export async function getMyClubs(): Promise<MyClub[]> {
   const [clubs, me] = await Promise.all([getClubs(), getCurrentUser()]);
-  return Promise.all(
-    clubs.map(async (club) => {
-      let membershipId: string | null = null;
-      let owner = false;
-      try {
-        const { memberships } = await teams.listMemberships(club.$id);
-        const mine = memberships.find((m) => m.userId === me?.$id);
-        if (mine) {
-          membershipId = mine.$id;
-          owner = isOwner(mine);
-        }
-      } catch {
-        // Leave the role unknown; the caller treats that as a regular member.
-      }
-      return {
-        id: club.$id,
-        name: club.name,
-        memberCount: club.total,
-        userId: me?.$id ?? '',
-        membershipId,
-        isOwner: owner,
-      };
-    })
-  );
+  return Promise.all(clubs.map((club) => describeMyClub(club, me?.$id)));
+}
+
+/** One club the user belongs to, or null if it doesn't exist or they aren't a member. */
+export async function getMyClub(clubId: string): Promise<MyClub | null> {
+  try {
+    const [club, me] = await Promise.all([teams.get(clubId), getCurrentUser()]);
+    const mine = await describeMyClub(club, me?.$id);
+    return mine.membershipId ? mine : null;
+  } catch {
+    return null;
+  }
 }
 
 export function createClub(name: string) {

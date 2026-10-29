@@ -56,7 +56,7 @@ export default function Home() {
     }
   }, []);
 
-  // Reload on focus so changes made on the Search tab or a club's page show up here.
+  // Reload on focus so changes made on a club's page or from the book search show up here.
   useFocusEffect(
     useCallback(() => {
       load();
