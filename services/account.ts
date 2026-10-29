@@ -1,7 +1,8 @@
 import { AppwriteException, ExecutionMethod } from 'react-native-appwrite';
 
-import { functions, getMyClubs, leaveClub, signOut } from '@/services/appwrite';
+import { account, functions, getMyClubs, leaveClub, signOut } from '@/services/appwrite';
 import { deleteMemberRows } from '@/services/clubData';
+import { classifyRecoveryError, isUnknownAccountError, normalizeRecoveryCode } from '@/utils/password';
 import type { SupportPayload } from '@/utils/support';
 
 // Both of these run as Appwrite Functions, because the app itself can't delete an account
@@ -9,7 +10,14 @@ import type { SupportPayload } from '@/utils/support';
 const deleteFunctionId = process.env.EXPO_PUBLIC_APPWRITE_DELETE_FUNCTION_ID ?? 'delete-account';
 const supportFunctionId = process.env.EXPO_PUBLIC_APPWRITE_SUPPORT_FUNCTION_ID ?? 'contact-support';
 
-export type AccountErrorKind = 'not-configured' | 'wrong-credentials' | 'club' | 'failed';
+export type AccountErrorKind =
+  | 'not-configured'
+  | 'wrong-credentials'
+  | 'club'
+  | 'bad-code'
+  | 'rate-limited'
+  | 'policy'
+  | 'failed';
 
 export class AccountError extends Error {
   constructor(
@@ -91,4 +99,53 @@ export async function deleteEverything(onStep?: (text: string) => void) {
 
 export function sendSupportMessage(payload: SupportPayload) {
   return callFunction(supportFunctionId, payload);
+}
+
+export interface PasswordRecovery {
+  /** Needed later to set the new password. Empty when the address isn't registered. */
+  userId: string;
+  /** A short phrase repeated in the email, so people can tell it came from their own request. */
+  phrase: string | null;
+}
+
+/**
+ * Asks Appwrite to email a 6-digit recovery code. An address with no account gets the same
+ * result as one with an account, so this can't be used to discover who has signed up.
+ */
+export async function requestPasswordRecovery(email: string): Promise<PasswordRecovery> {
+  try {
+    const token = await account.createRecoveryOTP({ email: email.trim(), phrase: true });
+    return { userId: token.userId, phrase: token.phrase || null };
+  } catch (e) {
+    if (e instanceof AppwriteException) {
+      if (isUnknownAccountError(e)) return { userId: '', phrase: null };
+      if (classifyRecoveryError(e) === 'rate-limited') {
+        throw new AccountError('rate-limited', 'Too many attempts. Please wait a few minutes and try again.');
+      }
+    }
+    throw new AccountError('failed', "We couldn't send the code. Check your connection and try again.");
+  }
+}
+
+/** Sets a new password using the code from the email. */
+export async function resetPassword(userId: string, code: string, password: string) {
+  if (!userId) {
+    throw new AccountError('bad-code', 'That code is wrong or has expired.');
+  }
+  try {
+    await account.updateRecoveryOTP({ userId, secret: normalizeRecoveryCode(code), password });
+  } catch (e) {
+    if (!(e instanceof AppwriteException)) {
+      throw new AccountError('failed', "We couldn't reset your password. Please try again.");
+    }
+    const kind = classifyRecoveryError(e);
+    if (kind === 'bad-code') {
+      throw new AccountError('bad-code', 'That code is wrong or has expired. Request a new one and try again.');
+    }
+    if (kind === 'rate-limited') {
+      throw new AccountError('rate-limited', 'Too many attempts. Please wait a few minutes and try again.');
+    }
+    // Password rule failures (too common, reused, and so on) come with a readable message.
+    throw new AccountError(kind, kind === 'policy' && e.message ? e.message : "We couldn't reset your password.");
+  }
 }

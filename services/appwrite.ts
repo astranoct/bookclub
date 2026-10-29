@@ -33,7 +33,7 @@ if (!projectId) {
 }
 
 const client = new Client().setEndpoint(endpoint).setProject(projectId).setPlatform(platform);
-const account = new Account(client);
+export const account = new Account(client);
 export const teams = new Teams(client);
 export const databases = new Databases(client);
 export const functions = new Functions(client);

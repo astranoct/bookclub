@@ -30,6 +30,16 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="login" />
         <Stack.Screen
+          name="forgot-password"
+          options={{
+            headerShown: true,
+            title: '',
+            headerStyle: { backgroundColor: Colors.background },
+            headerTintColor: Colors.text,
+            headerShadowVisible: false,
+          }}
+        />
+        <Stack.Screen
           name="club/[id]"
           options={{
             headerShown: true,
