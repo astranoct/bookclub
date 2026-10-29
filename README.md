@@ -16,6 +16,7 @@ Built with React Native, Expo and TypeScript, with [Appwrite](https://appwrite.i
   - the next meeting, which owners schedule with a date, time and note
   - suggestions, where any member can propose a book and owners pick the next one
 - **Profile** is where you set your display name
+- **Settings** has a contact form for support, a donate link, and **Delete all my information**, which removes your clubs, data and account after you re-enter your email and password
 
 A few details I cared about:
 
@@ -35,6 +36,8 @@ A few details I cared about:
 | Reading progress and suggestions | Two tables with one row per club membership, readable by that club's members and changeable only by the member it belongs to. Progress is tied to the current book, so it starts over when the book changes |
 | Invites | Appwrite emails a link that opens the app at `/invite`, where the invite is accepted |
 | Display names | A small `profiles` collection, one document per club membership. Appwrite can return blank names for other members and hides their user IDs, so each document is keyed by membership ID and only its owner can edit it |
+| Deleting an account | An Appwrite Function. The client SDK can only block an account, so a function with a server key checks the password you re-enter, then deletes the account. The app removes your name, progress, suggestions and club memberships first |
+| Support messages | An Appwrite Function emails them over SMTP. The address that receives them lives only in the function's variables, so it isn't in the app or this repository |
 | Book data and covers | Open Library Search API |
 
 The logic that decides things like who inherits a club, whether a name looks like an email, or whether a suggestion is still relevant lives in small pure functions under `utils/`, and is covered by tests.
@@ -45,6 +48,7 @@ The logic that decides things like who inherits a club, whether a name looks lik
 - TypeScript in strict mode
 - Appwrite for authentication, clubs, display names, progress and suggestions
 - Open Library for book data
+- Appwrite Functions (Node) for the two things the app can't do itself: deleting an account and sending support email
 - Native date and time pickers via `@react-native-community/datetimepicker`
 - Jest with `jest-expo` for tests
 - A small hand-rolled dark design system (`constants/Colors.ts`, `Button`, `Card`, `BookCard`)
@@ -87,7 +91,11 @@ The `profiles` collection holds display names only, never emails, and any signed
 
 One limitation: a member of a club could in theory create another member's row in that same club before they do. Preventing that would need a server function, so the app assumes the people in a club trust each other.
 
-### 3. Start the app
+### 3. Deploy the two functions (optional)
+
+Account deletion and the support form run as small Appwrite Functions. See [`functions/README.md`](functions/README.md) for the steps. Without them the rest of the app works, and Settings reports that those two features aren't set up.
+
+### 4. Start the app
 
 ```bash
 npx expo start
@@ -114,6 +122,7 @@ Owners invite people by email from a club's page. Appwrite only allows redirect 
 app/            Screens and routes (login, invite, club detail, book search, tabs: home, clubs, profile)
 components/     Shared UI (BookCard, Screen, themed text and inputs) and the club page cards in club/
 services/       Appwrite and Open Library clients (+ tests)
+functions/      Appwrite Functions for account deletion and support email, deployed separately
 utils/          Small pure helpers (+ tests)
 types/          Shared TypeScript types
 constants/      Color palette and radii

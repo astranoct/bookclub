@@ -4,6 +4,7 @@ import {
   AppwriteException,
   Client,
   Databases,
+  Functions,
   ID,
   Permission,
   Query,
@@ -22,7 +23,7 @@ const endpoint = process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT ?? 'https://cloud.app
 // URLs on hosts registered as platforms in the project, so this can be overridden.
 const inviteUrl = process.env.EXPO_PUBLIC_INVITE_URL ?? Linking.createURL('invite');
 export const databaseId = process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID ?? 'bookclub';
-const profilesCollectionId = process.env.EXPO_PUBLIC_APPWRITE_PROFILES_COLLECTION_ID ?? 'profiles';
+export const profilesCollectionId = process.env.EXPO_PUBLIC_APPWRITE_PROFILES_COLLECTION_ID ?? 'profiles';
 const platform = process.env.EXPO_PUBLIC_APPWRITE_PLATFORM ?? 'com.boosterlong.bookclub';
 
 if (!projectId) {
@@ -35,6 +36,7 @@ const client = new Client().setEndpoint(endpoint).setProject(projectId).setPlatf
 const account = new Account(client);
 export const teams = new Teams(client);
 export const databases = new Databases(client);
+export const functions = new Functions(client);
 
 /**
  * Verifies the endpoint, project ID and registered platform are all correct.

@@ -6,7 +6,7 @@ import {
   type Models,
 } from 'react-native-appwrite';
 
-import { databaseId, databases, teams } from '@/services/appwrite';
+import { databaseId, databases, profilesCollectionId, teams } from '@/services/appwrite';
 import type { Book } from '@/types/book';
 import type { ClubPrefs, Meeting, ProgressEntry } from '@/types/club';
 import { finishBook } from '@/utils/clubPrefs';
@@ -144,4 +144,21 @@ export async function removeSuggestion(membershipId: string) {
   } catch (e) {
     if (!(e instanceof AppwriteException) || e.code !== 404) throw e;
   }
+}
+
+/**
+ * Removes everything this membership has stored in the member-written tables: its display
+ * name, reading progress and suggestion. Rows that don't exist (or tables that aren't set up)
+ * are simply skipped.
+ */
+export async function deleteMemberRows(membershipId: string) {
+  await Promise.all(
+    [profilesCollectionId, progressCollectionId, suggestionsCollectionId].map(async (collectionId) => {
+      try {
+        await databases.deleteDocument(databaseId, collectionId, membershipId);
+      } catch (e) {
+        if (!(e instanceof AppwriteException) || e.code !== 404) throw e;
+      }
+    })
+  );
 }
