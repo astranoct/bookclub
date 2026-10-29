@@ -7,7 +7,7 @@ import { Button } from '@/components/Button';
 import { Card, Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { Colors } from '@/constants/Colors';
-import { getClubs, getCurrentBook, getCurrentUser, syncProfile } from '@/services/appwrite';
+import { getClubs, getCurrentBook, getCurrentUser, syncMyProfiles } from '@/services/appwrite';
 import type { Book } from '@/types/book';
 import { firstName, hasRealName } from '@/utils/people';
 
@@ -32,7 +32,7 @@ export default function Home() {
       const name = firstName(user?.name);
       setGreeting(name ? `Hi, ${name}` : 'Welcome back');
       setNeedsName(!!user && !hasRealName(user.name));
-      if (user) syncProfile({ id: user.$id, name: user.name });
+      if (user) syncMyProfiles({ id: user.$id, name: user.name });
 
       const summaries = await Promise.all(
         teamList.map(async (team) => ({

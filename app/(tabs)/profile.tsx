@@ -8,7 +8,7 @@ import { Card, Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedTextInput } from '@/components/ThemedTextInput';
 import { Colors } from '@/constants/Colors';
-import { getCurrentUser, saveProfile, signOut, syncProfile, updateName } from '@/services/appwrite';
+import { getCurrentUser, signOut, syncMyProfiles, updateName } from '@/services/appwrite';
 import { displayName, hasRealName, validateName } from '@/utils/people';
 
 interface Profile {
@@ -27,7 +27,6 @@ export default function ProfileScreen() {
   useEffect(() => {
     getCurrentUser().then((user) => {
       if (user) {
-        syncProfile({ id: user.$id, name: user.name });
         setProfile({ name: user.name, email: user.email });
         setName(hasRealName(user.name) ? user.name : '');
       }
@@ -47,12 +46,12 @@ export default function ProfileScreen() {
       const user = await updateName(name.trim());
       setProfile({ name: user.name, email: user.email });
       setName(hasRealName(user.name) ? user.name : '');
-      try {
-        await saveProfile(user.$id, user.name);
-        setFeedback({ ok: true, text: 'Name saved.' });
-      } catch {
-        setFeedback({ ok: false, text: "Name saved, but it couldn't be shared with your clubs yet." });
-      }
+      const shared = await syncMyProfiles({ id: user.$id, name: user.name });
+      setFeedback(
+        shared
+          ? { ok: true, text: 'Name saved.' }
+          : { ok: false, text: "Name saved, but it couldn't be shared with your clubs yet." }
+      );
     } catch {
       setFeedback({ ok: false, text: 'Could not save your name. Try again.' });
     } finally {

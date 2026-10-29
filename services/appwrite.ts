@@ -72,15 +72,17 @@ export function updateName(name: string) {
 }
 
 /**
- * Display names live in a `profiles` collection (one document per user, ID = user ID) because
- * Appwrite's membership names can come back blank for other members. Documents hold a name only.
+ * Display names live in a `profiles` collection because Appwrite's membership names can come
+ * back blank for other members. Appwrite also hides other members' user IDs, so each document
+ * is keyed by the membership ID instead, which every member of a club can see. Documents hold a
+ * name only, and only the member they belong to can change them.
  */
-export async function saveProfile(userId: string, name: string) {
+async function saveProfileDoc(membershipId: string, userId: string, name: string) {
   try {
-    await databases.updateDocument(databaseId, profilesCollectionId, userId, { name });
+    await databases.updateDocument(databaseId, profilesCollectionId, membershipId, { name });
   } catch (e) {
     if (!(e instanceof AppwriteException) || e.code !== 404) throw e;
-    await databases.createDocument(databaseId, profilesCollectionId, userId, { name }, [
+    await databases.createDocument(databaseId, profilesCollectionId, membershipId, { name }, [
       Permission.read(Role.users()),
       Permission.update(Role.user(userId)),
       Permission.delete(Role.user(userId)),
@@ -88,37 +90,38 @@ export async function saveProfile(userId: string, name: string) {
   }
 }
 
-let lastSyncedProfile = '';
+const syncedProfiles = new Set<string>();
 
-/** Makes sure an existing account's name is in the profiles collection. Best effort. */
-export async function syncProfile(user: { id: string; name: string }) {
-  if (!hasRealName(user.name)) return;
-  const key = `${user.id}:${user.name}`;
-  if (key === lastSyncedProfile) return;
+/**
+ * Publishes the user's display name for every club they belong to. Returns false if any club
+ * could not be updated, for example because the profiles collection isn't set up yet.
+ */
+export async function syncMyProfiles(user: { id: string; name: string }) {
+  if (!hasRealName(user.name)) return true;
 
   try {
-    const profile = await databases.getDocument<{ name?: string } & Models.Document>(
-      databaseId,
-      profilesCollectionId,
-      user.id
+    const clubs = await getClubs();
+    const results = await Promise.allSettled(
+      clubs.map(async (club) => {
+        const { memberships } = await teams.listMemberships(club.$id);
+        const mine = memberships.find((m) => m.userId === user.id);
+        if (!mine) return;
+
+        const key = `${mine.$id}:${user.name}`;
+        if (syncedProfiles.has(key)) return;
+        await saveProfileDoc(mine.$id, user.id, user.name);
+        syncedProfiles.add(key);
+      })
     );
-    if (profile.name !== user.name) await saveProfile(user.id, user.name);
-    lastSyncedProfile = key;
-  } catch (e) {
-    if (e instanceof AppwriteException && e.code === 404) {
-      try {
-        await saveProfile(user.id, user.name);
-        lastSyncedProfile = key;
-      } catch {
-        // Profiles aren't set up yet; names simply stay private until they are.
-      }
-    }
+    return results.every((r) => r.status === 'fulfilled');
+  } catch {
+    return false;
   }
 }
 
-/** Display names by user ID. Returns an empty map if the collection is unavailable. */
-export async function getProfileNames(userIds: string[]): Promise<Record<string, string>> {
-  const ids = userIds.slice(0, 100);
+/** Display names by membership ID. Returns an empty map if the collection is unavailable. */
+async function getProfileNames(membershipIds: string[]): Promise<Record<string, string>> {
+  const ids = membershipIds.slice(0, 100);
   if (ids.length === 0) return {};
   try {
     const { documents } = await databases.listDocuments<{ name?: string } & Models.Document>(
@@ -156,13 +159,13 @@ export interface ClubMember extends MembershipInfo {
 
 export async function getClubMembers(clubId: string): Promise<ClubMember[]> {
   const { memberships } = await teams.listMemberships(clubId);
-  const profileNames = await getProfileNames(memberships.map((m) => m.userId));
+  const profileNames = await getProfileNames(memberships.map((m) => m.$id));
   return memberships.map((m) => ({
     id: m.$id,
     userId: m.userId,
     roles: m.roles,
     confirmed: m.confirm,
-    name: resolveMemberName(profileNames[m.userId], m.userName),
+    name: resolveMemberName(profileNames[m.$id], m.userName),
   }));
 }
 

@@ -39,11 +39,11 @@ In the Appwrite console for your project:
 1. **Platforms:** add an Android platform with package name `com.boosterlong.bookclub` (and a Web platform for `localhost` if you want the browser build).
 2. **Auth → Settings:** enable Email/Password and Anonymous sessions.
 3. **Auth → Policies → Memberships → Privacy:** tick **Email** (and MFA status). Emails then aren't sent to other club members.
-4. **Databases:** create a database with ID `bookclub`, then a collection with ID `profiles`:
-   - **Settings → Permissions:** give the **Users** role **Create** and **Read**, and turn on **Document security**.
-   - **Attributes:** add a required string `name` with size 128.
+4. **Databases:** create a database and note its ID (if it isn't `bookclub`, set `EXPO_PUBLIC_APPWRITE_DATABASE_ID`). Inside it, create a table (called a collection in older consoles) with the ID `profiles`:
+   - **Settings → Permissions:** give the **Users** role **Create** and **Read**, and turn on **Row security** (Document security in older consoles).
+   - **Columns:** add a required `name` column. Use a text type of at most 128 characters; call it `name`.
 
-Display names live in `profiles` (one document per user, ID = user ID) because Appwrite's own membership names can come back blank for other members. The collection holds names only, never emails. Any signed-in user can read it, so treat display names as visible to everyone using the app. Without the collection, the app still works but other members appear as "Unnamed reader".
+Display names live in `profiles` because Appwrite's own membership names can come back blank for other members. Appwrite also hides other members' user IDs, so there is one document per club membership (ID = membership ID), written by the member it belongs to. The collection holds names only, never emails. Any signed-in user can read it, so treat display names as visible to everyone using the app. Without the collection, the app still works but other members appear as "Unnamed reader".
 
 ### Invites
 
