@@ -33,25 +33,17 @@ export function planLeave(memberships: MembershipInfo[], myUserId: string): Leav
   return { action: 'leave' };
 }
 
-export type ShareTarget<T extends { id: string }> =
-  | { kind: 'none' }
-  | { kind: 'direct'; club: T }
-  | { kind: 'ask' };
+export type ShareAction = 'set' | 'suggest';
 
 /**
- * Decides which club a newly chosen book should go to.
- * A club arrived at from its own card (`preferredId`) is used as-is, a user with a single
- * club has no real choice, and anyone in several clubs is asked.
+ * What choosing a book does for a club. Owners set the club's book, but can also suggest
+ * instead, and everyone else can only suggest. `suggestOnly` is used when the screen was
+ * opened from a "suggest a book" button, so that can never replace the current book.
  */
-export function resolveShareTarget<T extends { id: string }>(
-  clubs: T[],
-  preferredId?: string
-): ShareTarget<T> {
-  if (clubs.length === 0) return { kind: 'none' };
-
-  const preferred = preferredId ? clubs.find((c) => c.id === preferredId) : undefined;
-  if (preferred) return { kind: 'direct', club: preferred };
-
-  if (clubs.length === 1) return { kind: 'direct', club: clubs[0] };
-  return { kind: 'ask' };
+export function shareActions(
+  isOwner: boolean,
+  suggestOnly = false
+): { primary: ShareAction; secondary: ShareAction | null } {
+  if (!isOwner || suggestOnly) return { primary: 'suggest', secondary: null };
+  return { primary: 'set', secondary: 'suggest' };
 }

@@ -4,6 +4,7 @@ import {
   AppwriteException,
   Client,
   Databases,
+  Functions,
   ID,
   Permission,
   Query,
@@ -12,8 +13,7 @@ import {
   type Models,
 } from 'react-native-appwrite';
 
-import type { Book } from '@/types/book';
-import { planLeave, type MembershipInfo } from '@/utils/clubs';
+import { isOwner, planLeave, type MembershipInfo } from '@/utils/clubs';
 import type { InviteParams } from '@/utils/invites';
 import { hasRealName, resolveMemberName } from '@/utils/people';
 
@@ -22,8 +22,8 @@ const endpoint = process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT ?? 'https://cloud.app
 // Where Appwrite sends invitees after they open the emailed link. Appwrite only allows
 // URLs on hosts registered as platforms in the project, so this can be overridden.
 const inviteUrl = process.env.EXPO_PUBLIC_INVITE_URL ?? Linking.createURL('invite');
-const databaseId = process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID ?? 'bookclub';
-const profilesCollectionId = process.env.EXPO_PUBLIC_APPWRITE_PROFILES_COLLECTION_ID ?? 'profiles';
+export const databaseId = process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID ?? 'bookclub';
+export const profilesCollectionId = process.env.EXPO_PUBLIC_APPWRITE_PROFILES_COLLECTION_ID ?? 'profiles';
 const platform = process.env.EXPO_PUBLIC_APPWRITE_PLATFORM ?? 'com.boosterlong.bookclub';
 
 if (!projectId) {
@@ -34,17 +34,9 @@ if (!projectId) {
 
 const client = new Client().setEndpoint(endpoint).setProject(projectId).setPlatform(platform);
 const account = new Account(client);
-const teams = new Teams(client);
-const databases = new Databases(client);
-
-/**
- * Verifies the endpoint, project ID and registered platform are all correct.
- * react-native-appwrite 0.5 predates `client.ping()` (newer SDKs need Expo SDK 53+),
- * so this makes the same request ping() does.
- */
-export async function pingAppwrite() {
-  await client.call('get', new URL(`${endpoint}/ping`));
-}
+export const teams = new Teams(client);
+export const databases = new Databases(client);
+export const functions = new Functions(client);
 
 export async function getCurrentUser() {
   try {
@@ -95,21 +87,19 @@ const syncedProfiles = new Set<string>();
 /**
  * Publishes the user's display name for every club they belong to. Returns false if any club
  * could not be updated, for example because the profiles collection isn't set up yet.
+ * Pass `clubs` if you have already loaded them, to avoid fetching memberships twice.
  */
-export async function syncMyProfiles(user: { id: string; name: string }) {
+export async function syncMyProfiles(user: { id: string; name: string }, clubs?: MyClub[]) {
   if (!hasRealName(user.name)) return true;
 
   try {
-    const clubs = await getClubs();
+    const mine = clubs ?? (await getMyClubs());
     const results = await Promise.allSettled(
-      clubs.map(async (club) => {
-        const { memberships } = await teams.listMemberships(club.$id);
-        const mine = memberships.find((m) => m.userId === user.id);
-        if (!mine) return;
-
-        const key = `${mine.$id}:${user.name}`;
+      mine.map(async (club) => {
+        if (!club.membershipId) return;
+        const key = `${club.membershipId}:${user.name}`;
         if (syncedProfiles.has(key)) return;
-        await saveProfileDoc(mine.$id, user.id, user.name);
+        await saveProfileDoc(club.membershipId, user.id, user.name);
         syncedProfiles.add(key);
       })
     );
@@ -142,6 +132,62 @@ export function signOut() {
 export async function getClubs() {
   const { teams: clubs } = await teams.list();
   return clubs;
+}
+
+export interface MyClub {
+  id: string;
+  name: string;
+  memberCount: number;
+  /** The signed-in user's ID, needed to grant themselves rights on rows they create. */
+  userId: string;
+  /** The signed-in user's own membership in this club, which keys their per-club data. */
+  membershipId: string | null;
+  isOwner: boolean;
+}
+
+async function describeMyClub(club: Models.Team<Models.Preferences>, userId: string | undefined) {
+  let membershipId: string | null = null;
+  let owner = false;
+  try {
+    const { memberships } = await teams.listMemberships(club.$id);
+    const mine = memberships.find((m) => m.userId === userId);
+    if (mine) {
+      membershipId = mine.$id;
+      owner = isOwner(mine);
+    }
+  } catch {
+    // Leave the role unknown; the caller treats that as a regular member.
+  }
+  const result: MyClub = {
+    id: club.$id,
+    name: club.name,
+    memberCount: club.total,
+    userId: userId ?? '',
+    membershipId,
+    isOwner: owner,
+  };
+  return result;
+}
+
+/**
+ * Every club the signed-in user belongs to, with their own membership ID and role in each.
+ * Appwrite hides other members' user IDs but not your own, so your membership is the one
+ * whose user ID matches yours.
+ */
+export async function getMyClubs(): Promise<MyClub[]> {
+  const [clubs, me] = await Promise.all([getClubs(), getCurrentUser()]);
+  return Promise.all(clubs.map((club) => describeMyClub(club, me?.$id)));
+}
+
+/** One club the user belongs to, or null if it doesn't exist or they aren't a member. */
+export async function getMyClub(clubId: string): Promise<MyClub | null> {
+  try {
+    const [club, me] = await Promise.all([teams.get(clubId), getCurrentUser()]);
+    const mine = await describeMyClub(club, me?.$id);
+    return mine.membershipId ? mine : null;
+  } catch {
+    return null;
+  }
 }
 
 export function createClub(name: string) {
@@ -199,13 +245,4 @@ export async function leaveClub(clubId: string): Promise<'left' | 'deleted'> {
     await teams.deleteMembership(clubId, mine.id);
   }
   return 'left';
-}
-
-export async function getCurrentBook(clubId: string): Promise<Book | null> {
-  const prefs = await teams.getPrefs<{ currentBook?: Book }>(clubId);
-  return prefs.currentBook ?? null;
-}
-
-export function setCurrentBook(clubId: string, book: Book) {
-  return teams.updatePrefs(clubId, { currentBook: book });
 }

@@ -1,4 +1,4 @@
-import { planLeave, resolveShareTarget, type MembershipInfo } from '../clubs';
+import { planLeave, shareActions, type MembershipInfo } from '../clubs';
 
 const member = (
   userId: string,
@@ -35,27 +35,16 @@ describe('planLeave', () => {
   });
 });
 
-describe('resolveShareTarget', () => {
-  const a = { id: 'a', name: 'A' };
-  const b = { id: 'b', name: 'B' };
-
-  it('reports when there are no clubs', () => {
-    expect(resolveShareTarget([])).toEqual({ kind: 'none' });
+describe('shareActions', () => {
+  it('lets an owner set the book or suggest instead', () => {
+    expect(shareActions(true)).toEqual({ primary: 'set', secondary: 'suggest' });
   });
 
-  it('uses the only club without asking', () => {
-    expect(resolveShareTarget([a])).toEqual({ kind: 'direct', club: a });
+  it('lets a member only suggest', () => {
+    expect(shareActions(false)).toEqual({ primary: 'suggest', secondary: null });
   });
 
-  it('asks when there are several clubs', () => {
-    expect(resolveShareTarget([a, b])).toEqual({ kind: 'ask' });
-  });
-
-  it('uses the preferred club when it is one of yours', () => {
-    expect(resolveShareTarget([a, b], 'b')).toEqual({ kind: 'direct', club: b });
-  });
-
-  it('asks again if the preferred club is stale', () => {
-    expect(resolveShareTarget([a, b], 'gone')).toEqual({ kind: 'ask' });
+  it('never sets the book when opened to suggest, even for an owner', () => {
+    expect(shareActions(true, true)).toEqual({ primary: 'suggest', secondary: null });
   });
 });

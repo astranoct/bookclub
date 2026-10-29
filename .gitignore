@@ -38,3 +38,6 @@ yarn-error.*
 # local env files
 .env
 .env.local
+
+# packaged Appwrite Functions
+functions/.build/

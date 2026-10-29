@@ -29,13 +29,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="search"
-        options={{
-          title: 'Search',
-          tabBarIcon: ({ color }) => <MaterialIcons name="search" size={26} color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="clubs"
         options={{
           title: 'Clubs',
@@ -47,6 +40,13 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color }) => <MaterialIcons name="person" size={26} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Settings',
+          tabBarIcon: ({ color }) => <MaterialIcons name="settings" size={26} color={color} />,
         }}
       />
     </Tabs>

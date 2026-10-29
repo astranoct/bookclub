@@ -1,21 +1,25 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { BookCard } from '@/components/BookCard';
 import { Button } from '@/components/Button';
+import { ProgressBar } from '@/components/ProgressBar';
 import { Card, Screen } from '@/components/Screen';
 import { ThemedText } from '@/components/ThemedText';
 import { Colors } from '@/constants/Colors';
-import { getClubs, getCurrentBook, getCurrentUser, syncMyProfiles } from '@/services/appwrite';
-import type { Book } from '@/types/book';
+import { getCurrentUser, getMyClubs, syncMyProfiles, type MyClub } from '@/services/appwrite';
+import { getClubPrefs, getProgress } from '@/services/clubData';
+import type { ClubPrefs } from '@/types/club';
+import { formatMeeting, isUpcoming } from '@/utils/meeting';
 import { firstName, hasRealName } from '@/utils/people';
+import { currentPage, progressPercent } from '@/utils/progress';
 
 interface ClubSummary {
-  id: string;
-  name: string;
-  memberCount: number;
-  book: Book | null;
+  club: MyClub;
+  prefs: ClubPrefs;
+  myPage: number;
 }
 
 export default function Home() {
@@ -28,19 +32,22 @@ export default function Home() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const [teamList, user] = await Promise.all([getClubs(), getCurrentUser()]);
+      const [myClubs, user] = await Promise.all([getMyClubs(), getCurrentUser()]);
       const name = firstName(user?.name);
       setGreeting(name ? `Hi, ${name}` : 'Welcome back');
       setNeedsName(!!user && !hasRealName(user.name));
-      if (user) syncMyProfiles({ id: user.$id, name: user.name });
+      if (user) syncMyProfiles({ id: user.$id, name: user.name }, myClubs);
 
       const summaries = await Promise.all(
-        teamList.map(async (team) => ({
-          id: team.$id,
-          name: team.name,
-          memberCount: team.total,
-          book: await getCurrentBook(team.$id).catch(() => null),
-        }))
+        myClubs.map(async (club): Promise<ClubSummary> => {
+          const prefs = await getClubPrefs(club.id).catch(() => ({}) as ClubPrefs);
+          let myPage = 0;
+          if (club.membershipId && prefs.currentBook) {
+            const mine = await getProgress([club.membershipId]);
+            myPage = currentPage(mine[club.membershipId], prefs.currentBook);
+          }
+          return { club, prefs, myPage };
+        })
       );
       setClubs(summaries);
     } catch {
@@ -49,7 +56,7 @@ export default function Home() {
     }
   }, []);
 
-  // Reload on focus so a book picked on the Search tab shows up here straight away.
+  // Reload on focus so changes made on a club's page or from the book search show up here.
   useFocusEffect(
     useCallback(() => {
       load();
@@ -58,6 +65,10 @@ export default function Home() {
 
   function chooseBook(clubId: string) {
     router.push({ pathname: '/search', params: { clubId } });
+  }
+
+  function openClub(id: string) {
+    router.push({ pathname: '/club/[id]', params: { id } });
   }
 
   if (clubs === null) {
@@ -98,31 +109,64 @@ export default function Home() {
           <Button title="Create a club" onPress={() => router.push('/clubs')} />
         </Card>
       ) : (
-        clubs.map((club) => (
-          <Card key={club.id}>
-            <View style={styles.header}>
-              <ThemedText type="subtitle" style={styles.clubName} numberOfLines={1}>
-                {club.name}
-              </ThemedText>
-              <ThemedText type="muted">
-                {club.memberCount} {club.memberCount === 1 ? 'member' : 'members'}
-              </ThemedText>
-            </View>
+        clubs.map(({ club, prefs, myPage }) => {
+          const book = prefs.currentBook ?? null;
+          const percent = book ? progressPercent(myPage, book.pageCount) : null;
+          const meeting = isUpcoming(prefs.meeting) ? prefs.meeting : null;
 
-            <ThemedText type="label">Currently reading</ThemedText>
-            {club.book ? (
-              <BookCard book={club.book} variant={clubs.length === 1 ? 'featured' : 'compact'} />
-            ) : (
-              <ThemedText type="muted">No book chosen yet.</ThemedText>
-            )}
+          return (
+            <Card key={club.id}>
+              <View style={styles.header}>
+                <ThemedText type="subtitle" style={styles.clubName} numberOfLines={1}>
+                  {club.name}
+                </ThemedText>
+                <ThemedText type="muted">
+                  {club.memberCount} {club.memberCount === 1 ? 'member' : 'members'}
+                </ThemedText>
+              </View>
 
-            <Button
-              title={club.book ? 'Change book' : 'Choose a book'}
-              variant={club.book ? 'secondary' : 'primary'}
-              onPress={() => chooseBook(club.id)}
-            />
-          </Card>
-        ))
+              <ThemedText type="label">Currently reading</ThemedText>
+              {book ? (
+                <BookCard book={book} variant={clubs.length === 1 ? 'featured' : 'compact'} />
+              ) : (
+                <ThemedText type="muted">No book chosen yet.</ThemedText>
+              )}
+
+              {book && (
+                <View style={styles.progress}>
+                  <ThemedText type="muted">
+                    {myPage > 0
+                      ? `You're on page ${myPage}${book.pageCount ? ` of ${book.pageCount}` : ''}${percent !== null ? ` · ${percent}%` : ''}`
+                      : "You haven't logged any progress yet."}
+                  </ThemedText>
+                  <ProgressBar percent={percent} />
+                </View>
+              )}
+
+              {meeting && (
+                <View style={styles.meeting}>
+                  <MaterialIcons name="event" size={18} color={Colors.accentLight} />
+                  <ThemedText style={styles.meetingText}>
+                    Next meeting: {formatMeeting(meeting.at)}
+                  </ThemedText>
+                </View>
+              )}
+
+              {club.isOwner && (
+                <Button
+                  title={book ? 'Change book' : 'Choose a book'}
+                  variant={book ? 'secondary' : 'primary'}
+                  onPress={() => chooseBook(club.id)}
+                />
+              )}
+              <Button
+                title="Open club"
+                variant={club.isOwner ? 'ghost' : 'secondary'}
+                onPress={() => openClub(club.id)}
+              />
+            </Card>
+          );
+        })
       )}
     </Screen>
   );
@@ -133,4 +177,7 @@ const styles = StyleSheet.create({
   error: { color: Colors.danger },
   header: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 },
   clubName: { flexShrink: 1 },
+  progress: { gap: 6 },
+  meeting: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  meetingText: { flex: 1, fontSize: 15, lineHeight: 22 },
 });

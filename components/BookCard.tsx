@@ -34,9 +34,9 @@ function Chip({ icon, label, color }: { icon: 'insert-drive-file' | 'event' | 's
   );
 }
 
-function Chips({ book }: { book: Book }) {
+function Chips({ book, left = false }: { book: Book; left?: boolean }) {
   return (
-    <View style={styles.chips}>
+    <View style={[styles.chips, left && styles.chipsLeft]}>
       {book.pageCount !== undefined && (
         <Chip icon="insert-drive-file" label={`${book.pageCount} pages`} />
       )}
@@ -62,7 +62,7 @@ export function BookCard({ book, variant = 'featured' }: BookCardProps) {
           <ThemedText type="muted" numberOfLines={1}>
             {book.author}
           </ThemedText>
-          <Chips book={book} />
+          <Chips book={book} left />
         </View>
       </View>
     );
@@ -108,6 +108,7 @@ const styles = StyleSheet.create({
   compactDetails: { flex: 1, gap: 4, justifyContent: 'center' },
   compactTitle: { fontSize: 17, lineHeight: 22 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
+  chipsLeft: { justifyContent: 'flex-start' },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
