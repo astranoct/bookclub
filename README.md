@@ -44,7 +44,7 @@ The logic that decides things like who inherits a club, whether a name looks lik
 
 ## Tech stack
 
-- [Expo](https://expo.dev) (SDK 52) and React Native, with [Expo Router](https://docs.expo.dev/router/introduction) for file-based routing
+- [Expo](https://expo.dev) (SDK 54) and React Native, with [Expo Router](https://docs.expo.dev/router/introduction) for file-based routing
 - TypeScript in strict mode
 - Appwrite for authentication, clubs, display names, progress and suggestions
 - Open Library for book data
@@ -55,7 +55,7 @@ The logic that decides things like who inherits a club, whether a name looks lik
 
 ## Run it yourself
 
-You need **Node 18+** and a free [Appwrite Cloud](https://cloud.appwrite.io) project.
+You need **Node 20.19.4 or newer** and a free [Appwrite Cloud](https://cloud.appwrite.io) project.
 
 ### 1. Install and configure
 

@@ -17,10 +17,18 @@ const theme: Theme = {
   },
 };
 
+// `anchor` is the screen deep links are stacked on top of, so Back from a link lands on `index`.
+// (`initialRouteName` is its older spelling.)
+export const unstable_settings = { anchor: 'index', initialRouteName: 'index' };
+
 export default function RootLayout() {
   return (
     <ThemeProvider value={theme}>
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.background } }}>
+        {/* Expo Router starts on the first screen declared here, so `index` must come first. */}
+        <Stack.Screen name="index" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="login" />
         <Stack.Screen
           name="club/[id]"
           options={{
