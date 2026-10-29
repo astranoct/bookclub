@@ -22,7 +22,8 @@ export default async ({ req, res, error }) => {
     return res.json({ error: 'You need to be signed in.' }, 401);
   }
 
-  const endpoint = process.env.APPWRITE_FUNCTION_API_ENDPOINT;
+  // Appwrite normally provides the endpoint. If it doesn't, set APPWRITE_ENDPOINT as a variable.
+  const endpoint = process.env.APPWRITE_FUNCTION_API_ENDPOINT ?? process.env.APPWRITE_ENDPOINT;
   const project = process.env.APPWRITE_FUNCTION_PROJECT_ID;
   const users = new Users(
     new Client().setEndpoint(endpoint).setProject(project).setKey(req.headers['x-appwrite-key'])

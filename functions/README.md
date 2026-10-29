@@ -23,7 +23,7 @@ For each function, in the Appwrite console go to **Functions > Create function**
 
 - Function ID: `delete-account`
 - **Scopes:** `users.read` and `users.write`
-- No variables needed.
+- No variables are normally needed. If a test run says it can't reach Appwrite, add `APPWRITE_ENDPOINT` with your API endpoint (for example `https://sfo.cloud.appwrite.io/v1`).
 
 ### `contact-support`
 
