@@ -1,5 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -12,6 +12,8 @@ import { register, signIn, signInAnonymously } from '@/services/appwrite';
 
 export default function Login() {
   const router = useRouter();
+  // Set by the forgot-password screen once a new password has been saved.
+  const { reset } = useLocalSearchParams<{ reset?: string }>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +59,9 @@ export default function Login() {
           onChangeText={setPassword}
         />
 
+        {reset === '1' && !error && (
+          <ThemedText style={styles.success}>Password updated. Sign in with your new password.</ThemedText>
+        )}
         {error && <ThemedText style={styles.error}>{error}</ThemedText>}
 
         <Button title="Sign in" loading={busy} onPress={() => run(() => signIn(email, password))} />
@@ -65,6 +70,12 @@ export default function Login() {
           variant="secondary"
           disabled={busy}
           onPress={() => run(() => register(email, password))}
+        />
+        <Button
+          title="Forgot password?"
+          variant="ghost"
+          disabled={busy}
+          onPress={() => router.push({ pathname: '/forgot-password', params: { email } })}
         />
       </Card>
 
@@ -90,4 +101,5 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   error: { color: Colors.danger, fontSize: 14, lineHeight: 20 },
+  success: { color: Colors.success, fontSize: 14, lineHeight: 20 },
 });

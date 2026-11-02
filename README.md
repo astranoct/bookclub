@@ -23,7 +23,7 @@ A few details I cared about:
 - **Privacy by default.** Members see each other by display name only. Email addresses are never shown to other club members
 - **Clubs never end up ownerless.** If the only owner leaves, ownership passes to the longest-standing member. If the last member leaves, the club is deleted
 - **Owners and members have different powers.** Owners choose and finish the book, schedule meetings and send invites. Everyone logs their own progress and can suggest one book at a time. "Find a book to suggest" only ever adds a suggestion, so it can never replace the current book
-- **Low-friction sign-in.** Sign in with email, create an account, or continue as a guest to look around first
+- **Low-friction sign-in.** Sign in with email, create an account, or continue as a guest to look around first. Forgot your password? A 6-digit code is emailed to you, so it works in any email app, with a security phrase you can match against the email. The screen never reveals whether an address has an account
 - **Invites work two ways.** Tap the emailed link to open the app, or paste the link into **Clubs > Join with an invite link**
 
 ## How it works
@@ -34,6 +34,7 @@ A few details I cared about:
 | Clubs and membership | Appwrite Teams. A club is a team, and owner/member are team roles |
 | Current book, meeting and finished books | Stored in the team's preferences. Only owners can write those, which matches who is allowed to change them. Saves merge into what is already there, so scheduling a meeting never wipes the current book |
 | Reading progress and suggestions | Two tables with one row per club membership, readable by that club's members and changeable only by the member it belongs to. Progress is tied to the current book, so it starts over when the book changes |
+| Password reset | Appwrite's recovery code (OTP) flow: the app asks for a 6-digit code by email, then submits it with the new password. It needs no redirect link or domain |
 | Invites | Appwrite emails a link that opens the app at `/invite`, where the invite is accepted |
 | Display names | A small `profiles` collection, one document per club membership. Appwrite can return blank names for other members and hides their user IDs, so each document is keyed by membership ID and only its owner can edit it |
 | Deleting an account | An Appwrite Function. The client SDK can only block an account, so a function with a server key checks the password you re-enter, then deletes the account. The app removes your name, progress, suggestions and club memberships first |
@@ -44,7 +45,7 @@ The logic that decides things like who inherits a club, whether a name looks lik
 
 ## Tech stack
 
-- [Expo](https://expo.dev) (SDK 52) and React Native, with [Expo Router](https://docs.expo.dev/router/introduction) for file-based routing
+- [Expo](https://expo.dev) (SDK 54) and React Native, with [Expo Router](https://docs.expo.dev/router/introduction) for file-based routing
 - TypeScript in strict mode
 - Appwrite for authentication, clubs, display names, progress and suggestions
 - Open Library for book data
@@ -55,7 +56,7 @@ The logic that decides things like who inherits a club, whether a name looks lik
 
 ## Run it yourself
 
-You need **Node 18+** and a free [Appwrite Cloud](https://cloud.appwrite.io) project.
+You need **Node 20.19.4 or newer** and a free [Appwrite Cloud](https://cloud.appwrite.io) project.
 
 ### 1. Install and configure
 
@@ -106,6 +107,30 @@ Open it in Expo Go on your phone, an emulator, or the browser (press `w`).
 ### Sending invites
 
 Owners invite people by email from a club's page. Appwrite only allows redirect URLs on hosts registered as platforms in your project. If sending an invite is rejected, register a Web platform and set `EXPO_PUBLIC_INVITE_URL` in `.env.local` (see `.env.example`). Invitees can always paste the emailed link into **Clubs > Join with an invite link**.
+
+### Installing a preview build on your phone
+
+EAS (Expo's cloud build service) turns the app into a real installable Android app, with no computer needed afterwards. You need a free Expo account.
+
+```bash
+npx eas-cli login
+npx eas-cli init
+```
+
+A cloud build can't see your `.env.local`, so store the same settings as Expo environment variables once (these are identifiers that ship inside every app, not secrets):
+
+```bash
+npx eas-cli env:create --environment preview --name EXPO_PUBLIC_APPWRITE_PROJECT_ID --value <project id> --visibility plaintext
+npx eas-cli env:create --environment preview --name EXPO_PUBLIC_APPWRITE_ENDPOINT --value <endpoint> --visibility plaintext
+npx eas-cli env:create --environment preview --name EXPO_PUBLIC_APPWRITE_PLATFORM --value com.boosterlong.bookclub --visibility plaintext
+npx eas-cli env:create --environment preview --name EXPO_PUBLIC_APPWRITE_DATABASE_ID --value <database id> --visibility plaintext
+```
+
+Then build, and open the link or scan the QR code it prints on your phone:
+
+```bash
+npx eas-cli build --platform android --profile preview
+```
 
 ## Scripts
 
