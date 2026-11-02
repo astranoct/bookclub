@@ -108,6 +108,30 @@ Open it in Expo Go on your phone, an emulator, or the browser (press `w`).
 
 Owners invite people by email from a club's page. Appwrite only allows redirect URLs on hosts registered as platforms in your project. If sending an invite is rejected, register a Web platform and set `EXPO_PUBLIC_INVITE_URL` in `.env.local` (see `.env.example`). Invitees can always paste the emailed link into **Clubs > Join with an invite link**.
 
+### Installing a preview build on your phone
+
+EAS (Expo's cloud build service) turns the app into a real installable Android app, with no computer needed afterwards. You need a free Expo account.
+
+```bash
+npx eas-cli login
+npx eas-cli init
+```
+
+A cloud build can't see your `.env.local`, so store the same settings as Expo environment variables once (these are identifiers that ship inside every app, not secrets):
+
+```bash
+npx eas-cli env:create --environment preview --name EXPO_PUBLIC_APPWRITE_PROJECT_ID --value <project id> --visibility plaintext
+npx eas-cli env:create --environment preview --name EXPO_PUBLIC_APPWRITE_ENDPOINT --value <endpoint> --visibility plaintext
+npx eas-cli env:create --environment preview --name EXPO_PUBLIC_APPWRITE_PLATFORM --value com.boosterlong.bookclub --visibility plaintext
+npx eas-cli env:create --environment preview --name EXPO_PUBLIC_APPWRITE_DATABASE_ID --value <database id> --visibility plaintext
+```
+
+Then build, and open the link or scan the QR code it prints on your phone:
+
+```bash
+npx eas-cli build --platform android --profile preview
+```
+
 ## Scripts
 
 | Command             | What it does              |
