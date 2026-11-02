@@ -40,6 +40,13 @@
     "experiments": {
       "typedRoutes": true
     },
-    "backgroundColor": "#0A0B10"
+    "backgroundColor": "#0A0B10",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c80a6735-4924-4c78-be82-27eeecbeb592"
+      }
+    },
+    "owner": "astranoct"
   }
 }
